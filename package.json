@@ -1,0 +1,13 @@
+{
+  "name": "neon-futbol-simulator",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Neon futbol simülatörü - İki takım karşılaşmalı ve lig çember eleme oyunu",
+  "scripts": {
+    "start": "npx serve .",
+    "dev": "npx serve ."
+  },
+  "keywords": ["neon", "football", "simulator", "canvas", "game"],
+  "author": "",
+  "license": "MIT"
+}

@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Neon Futbol Simülatörü</title>
+  <meta name="description" content="İki takım karşılaşmalı ve lig çember eleme modlu neon futbol simülatörü">
+  <link rel="stylesheet" href="style.css">
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚽</text></svg>">
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- Top Navigation Bar -->
+    <header class="top-nav">
+      <div class="brand-badge">
+        <span>⚡ NEON FUTBOL</span>
+      </div>
+      <div class="nav-actions">
+        <button id="btnStandings" class="icon-btn" title="Puan Tablosu" aria-label="Puan Tablosu">📊</button>
+        <button id="btnSelectTeams" class="icon-btn" title="Takım & Lig Seçimi" aria-label="Takım Seçimi">⚙️</button>
+        <button id="btnSoundToggle" class="icon-btn" title="Sesi Aç/Kapat" aria-label="Ses">🔊</button>
+      </div>
+    </header>
+
+    <!-- Game Mode Tabs -->
+    <nav class="mode-tabs">
+      <button class="mode-tab active" data-mode="kickoff">
+        <span>⚽</span> 1v1 Maç
+      </button>
+      <button class="mode-tab" data-mode="battle">
+        <span>💥</span> Çember Eleme
+      </button>
+      <button class="mode-tab" data-mode="tournament">
+        <span>🏆</span> Turnuva
+      </button>
+    </nav>
+
+    <!-- Mode 1: 1v1 Kick Off Scoreboard (Matching Screenshot) -->
+    <section id="kickoffScoreboard" class="scoreboard-container">
+      <!-- Team A (Home) -->
+      <div id="teamCardA" class="team-card">
+        <div id="teamBadgeWrapA" class="team-badge-wrapper home-glow">
+          <img id="teamBadgeImgA" class="team-badge-img" src="" alt="Team A">
+        </div>
+        <div id="teamNameA" class="team-name">FENERBAHÇE</div>
+        <div class="team-accent-bar home-bar"></div>
+      </div>
+
+      <!-- Center Score & Match Timer -->
+      <div class="center-score-section">
+        <div id="scoreDigitA" class="score-digit">0</div>
+        
+        <div class="match-timer-capsule">
+          <div id="timerMinute" class="timer-minute">0'</div>
+          <div id="timerStatus" class="timer-status">1. YARI</div>
+        </div>
+
+        <div id="scoreDigitB" class="score-digit">0</div>
+      </div>
+
+      <!-- Team B (Away) -->
+      <div id="teamCardB" class="team-card">
+        <div id="teamBadgeWrapB" class="team-badge-wrapper away-glow">
+          <img id="teamBadgeImgB" class="team-badge-img" src="" alt="Team B">
+        </div>
+        <div id="teamNameB" class="team-name">LIVERPOOL</div>
+        <div class="team-accent-bar away-bar"></div>
+      </div>
+    </section>
+
+    <!-- Mode 2: Battle Royale Header (Shown in Battle mode) -->
+    <section id="battleScoreboard" class="scoreboard-container" style="display: none;">
+      <div class="battle-header">
+        <div class="battle-league-info">
+          <span id="battleLeagueIcon" class="battle-badge">🇹🇷</span>
+          <div>
+            <div id="battleLeagueTitle" class="battle-title">Trendyol Süper Lig</div>
+            <div class="battle-subtitle">Kaleye giren takım elenir!</div>
+          </div>
+        </div>
+        <div class="battle-counter-chip">
+          <div id="battleRemainingCount">18/18 TAKIM</div>
+          <div id="battleLastEliminated" style="font-size: 0.65rem; color: #fca5a5;">Canlı Mücadele</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Mode 3: Tournament Header (Shown in Tournament mode) -->
+    <section id="tournamentScoreboard" class="scoreboard-container" style="display: none;">
+      <div class="battle-header">
+        <div class="battle-league-info">
+          <span class="battle-badge">🏆</span>
+          <div>
+            <div id="tournamentRoundTitle" class="battle-title">Çeyrek Final (1/4)</div>
+            <div class="battle-subtitle">Neon Süper Kupa Eleme Aşaması</div>
+          </div>
+        </div>
+        <button id="btnViewBracket" class="icon-btn" style="width: auto; padding: 4px 10px; font-size: 0.75rem; font-weight: 800; gap: 4px;">
+          <span>🌳</span> Şema
+        </button>
+      </div>
+    </section>
+
+    <!-- Arena Container with Canvas -->
+    <main class="arena-wrapper">
+      <canvas id="gameCanvas"></canvas>
+
+      <!-- Animated Goal Celebration Banner -->
+      <div id="goalPopup" class="goal-popup-overlay">
+        <div class="goal-banner-text">GOOOOOL!</div>
+        <div id="goalTeamLabel" class="goal-team-label">FENERBAHÇE</div>
+      </div>
+
+      <!-- Animated Elimination Banner for Battle Royale -->
+      <div id="elimPopup" class="elim-popup-overlay">
+        <div class="elim-banner-text">ELENDİ!</div>
+        <div id="elimTeamName" class="elim-team-name">Takım Adı</div>
+      </div>
+    </main>
+
+    <!-- Match Bottom Controls Bar -->
+    <footer class="controls-bottom-bar">
+      <!-- Match Speed Selector -->
+      <div class="speed-control-group">
+        <button class="speed-btn" data-speed="1">1x</button>
+        <button class="speed-btn active" data-speed="2">2x</button>
+        <button class="speed-btn" data-speed="4">4x</button>
+        <button class="speed-btn" data-speed="8">8x</button>
+      </div>
+
+      <!-- Play / Pause / Start Button -->
+      <button id="btnMainPlay" class="play-action-btn">
+        <span id="btnMainPlayIcon">▶</span>
+        <span id="btnMainPlayText">BAŞLAT</span>
+      </button>
+
+      <!-- Restart Match Button -->
+      <button id="btnRestart" class="icon-btn" title="Yeniden Başlat" aria-label="Yeniden Başlat">🔄</button>
+    </footer>
+
+  </div>
+
+  <!-- MODAL 1: League & Team Selection -->
+  <div id="teamsModal" class="modal-backdrop">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>⚽</span> Takım & Lig Seçimi
+        </div>
+        <button id="btnCloseTeamsModal" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        
+        <!-- League Tabs -->
+        <div id="modalLeagueTabs" class="league-selector-row">
+          <!-- Filled dynamically by JS -->
+        </div>
+
+        <!-- Mode instructions -->
+        <div id="teamSelectionPrompt" style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px;">
+          Seçmek istediğiniz takıma dokunun:
+        </div>
+
+        <!-- Teams Grid -->
+        <div id="modalTeamsGrid" class="teams-grid">
+          <!-- Populated by JS -->
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button id="btnRandomMatch" class="btn-secondary">🎲 Rastgele Eşleştir</button>
+        <button id="btnConfirmSelection" class="play-action-btn" style="flex: initial; padding: 8px 18px;">Tamam</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: League Standings (Puan Tabloları) -->
+  <div id="standingsModal" class="modal-backdrop">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>📊</span> Puan Durumu Tablosu
+        </div>
+        <button id="btnCloseStandingsModal" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        
+        <!-- League Filter Tabs -->
+        <div id="standingsLeagueTabs" class="league-selector-row">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Table -->
+        <div class="standings-table-container">
+          <table class="standings-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th style="text-align: left;">Takım</th>
+                <th>OM</th>
+                <th>G</th>
+                <th>B</th>
+                <th>M</th>
+                <th>AG</th>
+                <th>YG</th>
+                <th>AV</th>
+                <th>P</th>
+              </tr>
+            </thead>
+            <tbody id="standingsTableBody">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button id="btnResetCurrentLeague" class="btn-danger">Bu Ligi Sıfırla</button>
+        <button id="btnResetAllData" class="btn-danger">Tüm Verileri Sıfırla</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: Match Result & Champion Celebration -->
+  <div id="resultModal" class="modal-backdrop">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>🏆</span> Maç Sonu
+        </div>
+        <button id="btnCloseResultModal" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="winner-card">
+          <div class="winner-trophy-icon">🏆</div>
+          <img id="winnerTeamBadge" class="winner-team-badge" src="" alt="Winner">
+          <div id="winnerHeadline" class="winner-headline">FENERBAHÇE KAZANDI!</div>
+          <div id="winnerSubtext" class="winner-subtext">Harika Bir Mücadele</div>
+
+          <div id="finalScoreDisplay" class="final-score-display">
+            <span id="finalScoreA">3</span>
+            <span>-</span>
+            <span id="finalScoreB">2</span>
+          </div>
+
+          <div id="matchStatsList" style="font-size: 0.82rem; color: #94a3b8; line-height: 1.6; margin-top: 10px;">
+            <div>⏱️ Toplam Süre: 90'+5 Uzatma</div>
+            <div id="totalGoalsStat">⚽ Toplam Gol: 5</div>
+            <div>⚡ 2x Hız Simülasyonu</div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content: center; gap: 10px;">
+        <button id="btnRematch" class="play-action-btn" style="flex: 1;">Tekrar Oyna</button>
+        <button id="btnNewMatch" class="btn-secondary" style="flex: 1;">Yeni Eşleşme</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 4: Tournament Bracket Tree View -->
+  <div id="tournamentModal" class="modal-backdrop">
+    <div class="modal-sheet">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>🏆</span> Turnuva Eşleşme Ağacı
+        </div>
+        <button id="btnCloseTournamentModal" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body" id="tournamentBracketTreeContainer">
+        <!-- Rendered by JS -->
+      </div>
+      <div class="modal-footer">
+        <button id="btnResetTournament" class="btn-danger">Turnuvayı Sıfırla</button>
+        <button id="btnContinueTournament" class="play-action-btn" style="flex: initial; padding: 8px 18px;">Maça Devam Et</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Application Logic -->
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

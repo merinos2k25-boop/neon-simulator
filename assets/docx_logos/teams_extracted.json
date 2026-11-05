@@ -1,0 +1,146 @@
+[
+  {
+    "name": "Manchester City",
+    "image": "image1.png"
+  },
+  {
+    "name": "FC Bayern Münih",
+    "image": "image2.png"
+  },
+  {
+    "name": "Atlético Madrid",
+    "image": "image3.png"
+  },
+  {
+    "name": "Como 1907",
+    "image": "image4.png"
+  },
+  {
+    "name": "Sporting CP",
+    "image": "image5.png"
+  },
+  {
+    "name": "Galatasaray SK",
+    "image": "image6.png"
+  },
+  {
+    "name": "Villarreal CF",
+    "image": "image7.png"
+  },
+  {
+    "name": "Fenerbahçe SK",
+    "image": "image8.png"
+  },
+  {
+    "name": "Real Betis",
+    "image": "image9.png"
+  },
+  {
+    "name": "LOSC Lille",
+    "image": "image10.png"
+  },
+  {
+    "name": "RC Lens",
+    "image": "image11.png"
+  },
+  {
+    "name": "AEK",
+    "image": "image12.png"
+  },
+  {
+    "name": "FK Bodø/Glimt",
+    "image": "image13.png"
+  },
+  {
+    "name": "Sabah FK",
+    "image": "image14.png"
+  },
+  {
+    "name": "Inter Milan",
+    "image": "image15.png"
+  },
+  {
+    "name": "Shakhtar Donetsk",
+    "image": "image16.png"
+  },
+  {
+    "name": "LASK",
+    "image": "image17.png"
+  },
+  {
+    "name": "Slovan Bratislava",
+    "image": "image18.png"
+  },
+  {
+    "name": "Arsenal",
+    "image": "image19.png"
+  },
+  {
+    "name": "FC Barcelona",
+    "image": "image20.png"
+  },
+  {
+    "name": "Liverpool FC",
+    "image": "image21.png"
+  },
+  {
+    "name": "Aston Villa",
+    "image": "image22.png"
+  },
+  {
+    "name": "RB Leipzig",
+    "image": "image23.png"
+  },
+  {
+    "name": "FC Porto",
+    "image": "image24.png"
+  },
+  {
+    "name": "SK Slavia Prag",
+    "image": "image25.png"
+  },
+  {
+    "name": "Real Madrid",
+    "image": "image26.png"
+  },
+  {
+    "name": "Paris Saint-Germain",
+    "image": "image27.png"
+  },
+  {
+    "name": "Manchester United",
+    "image": "image28.png"
+  },
+  {
+    "name": "Borussia Dortmund",
+    "image": "image29.png"
+  },
+  {
+    "name": "AS Roma",
+    "image": "image30.png"
+  },
+  {
+    "name": "SSC Napoli",
+    "image": "image31.png"
+  },
+  {
+    "name": "VfB Stuttgart",
+    "image": "image32.png"
+  },
+  {
+    "name": "PSV Eindhoven",
+    "image": "image33.png"
+  },
+  {
+    "name": "Feyenoord",
+    "image": "image34.png"
+  },
+  {
+    "name": "Club Brugge",
+    "image": "image35.png"
+  },
+  {
+    "name": "Viking FK",
+    "image": "image36.png"
+  }
+]

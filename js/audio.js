@@ -9,12 +9,14 @@ class SoundEngine {
   }
 
   init() {
-    if (!this.ctx) {
+    if (!this.ctx && typeof window !== 'undefined') {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
-      this.ctx = new AudioContext();
-      this.initialized = true;
+      if (AudioContext) {
+        this.ctx = new AudioContext();
+        this.initialized = true;
+      }
     }
-    if (this.ctx.state === 'suspended') {
+    if (this.ctx && this.ctx.state === 'suspended') {
       this.ctx.resume();
     }
   }
@@ -32,6 +34,7 @@ class SoundEngine {
   playBounce(intensity = 1.0) {
     if (this.isMuted) return;
     this.init();
+    if (!this.ctx) return;
     const now = this.ctx.currentTime;
 
     const osc = this.ctx.createOscillator();
@@ -56,6 +59,7 @@ class SoundEngine {
   playPuckClash(intensity = 1.0) {
     if (this.isMuted) return;
     this.init();
+    if (!this.ctx) return;
     const now = this.ctx.currentTime;
 
     const osc = this.ctx.createOscillator();
@@ -79,6 +83,7 @@ class SoundEngine {
   playPostHit() {
     if (this.isMuted) return;
     this.init();
+    if (!this.ctx) return;
     const now = this.ctx.currentTime;
 
     const osc = this.ctx.createOscillator();
@@ -103,6 +108,7 @@ class SoundEngine {
   playWhistle(type = 'short') {
     if (this.isMuted) return;
     this.init();
+    if (!this.ctx) return;
 
     if (type === 'halfTime') {
       // One long whistle
@@ -171,6 +177,7 @@ class SoundEngine {
   playGoal() {
     if (this.isMuted) return;
     this.init();
+    if (!this.ctx) return;
     const now = this.ctx.currentTime;
 
     // 1. Stadium Air Horn (Major chord)
@@ -238,6 +245,7 @@ class SoundEngine {
   playElimination() {
     if (this.isMuted) return;
     this.init();
+    if (!this.ctx) return;
     const now = this.ctx.currentTime;
 
     const osc = this.ctx.createOscillator();
@@ -267,6 +275,7 @@ class SoundEngine {
   playChampionFanfare() {
     if (this.isMuted) return;
     this.init();
+    if (!this.ctx) return;
     const now = this.ctx.currentTime;
     const notes = [
       { f: 392.00, d: 0.15, t: 0 },       // G4

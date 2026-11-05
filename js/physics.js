@@ -13,11 +13,12 @@ export class PhysicsEngine {
     this.cy = this.height / 2;
     this.radius = 180;
 
-    // Goal Configuration (Left side of the ring at angle Math.PI)
-    this.goalAngle = Math.PI; // 180 degrees (Left)
-    this.goalArc = 0.55;      // Angular span (~31 degrees opening)
-    this.goalDepth = 42;      // Visual goal depth outside the circle
-    this.postRadius = 6;
+    // 360 Degree Rotating Goal Configuration
+    this.goalAngle = Math.PI; // Starts at left
+    this.goalRotSpeed = 0.50; // Continuous smooth rotation (~12.5s per full 360 revolution)
+    this.goalArc = 0.36;      // Angular span (~20 deg for 1v1, ~12.5 deg for Lig Geneli)
+    this.goalDepth = 24;      // Visual goal depth outside the circle
+    this.postRadius = 5.5;
 
     // Simulation entities
     this.pucks = [];
@@ -50,7 +51,7 @@ export class PhysicsEngine {
 
   resize() {
     const rect = this.canvas.getBoundingClientRect();
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = Math.min((typeof window !== 'undefined' && window.devicePixelRatio) || 1, 2);
     
     const displayWidth = rect.width > 0 ? rect.width : (this.canvas.parentElement?.clientWidth || 380);
     const displayHeight = rect.height > 0 ? rect.height : (this.canvas.parentElement?.clientHeight || 460);
@@ -62,18 +63,16 @@ export class PhysicsEngine {
     this.height = this.canvas.height;
     this.dpr = dpr;
 
-    // Shift center slightly to the right to leave comfortable room for the left goal net
-    this.cx = this.width * 0.525;
-    this.cy = this.height * 0.50;
+    // Centered exactly in canvas so rotating 360 goal has equal clearance on all sides
+    this.cx = this.width / 2;
+    this.cy = this.height / 2;
 
-    // Radius expands to fill available width and height generously
-    // Goal net depth on the left
-    this.goalDepth = Math.max(26 * dpr, Math.min(38 * dpr, this.width * 0.09));
+    const minDim = Math.min(this.width, this.height);
+    this.goalDepth = Math.max(16 * dpr, Math.min(26 * dpr, minDim * 0.065));
     
-    // Maximize circle radius so it looks grand on all mobile and desktop screens
-    const availableW = (this.width - this.goalDepth - 16 * dpr) * 0.51;
-    const availableH = (this.height - 16 * dpr) * 0.50;
-    this.radius = Math.max(130 * dpr, Math.min(availableW, availableH));
+    // Safety margin to guarantee the circle and 360 rotating goal are 100% visible on all screens with zero cutoff
+    const safetyMargin = this.goalDepth + 14 * dpr;
+    this.radius = Math.max(80 * dpr, (minDim / 2) - safetyMargin);
 
     // Recalculate existing puck sizes if already present
     this.recalculatePuckSizes();
@@ -84,19 +83,16 @@ export class PhysicsEngine {
     const count = this.pucks.length;
     let puckRadius;
     if (count === 2) {
-      // 1v1 match: sleek compact disc with lots of room to glide
       puckRadius = Math.round(this.radius * 0.115);
-      puckRadius = Math.max(14 * this.dpr, Math.min(puckRadius, 20 * this.dpr));
+      puckRadius = Math.max(13 * this.dpr, Math.min(puckRadius, 19 * this.dpr));
     } else if (count <= 8) {
       puckRadius = Math.round(this.radius * 0.085);
-      puckRadius = Math.max(11 * this.dpr, Math.min(puckRadius, 15 * this.dpr));
+      puckRadius = Math.max(10 * this.dpr, Math.min(puckRadius, 15 * this.dpr));
     } else if (count <= 18) {
-      // 18 teams (Süper Lig / Ligue 1)
-      puckRadius = Math.round(this.radius * 0.056);
+      puckRadius = Math.round(this.radius * 0.055);
       puckRadius = Math.max(8 * this.dpr, Math.min(puckRadius, 12 * this.dpr));
     } else {
-      // 20-32 teams (Premier Lig / UCL)
-      puckRadius = Math.round(this.radius * 0.046);
+      puckRadius = Math.round(this.radius * 0.045);
       puckRadius = Math.max(7 * this.dpr, Math.min(puckRadius, 10 * this.dpr));
     }
 
@@ -106,7 +102,7 @@ export class PhysicsEngine {
   }
 
   preloadTeamLogo(team) {
-    if (!team) return;
+    if (!team || typeof Image === 'undefined') return;
     const url = team.badgeUrl || team.docxLogoUrl;
     if (url && !this.imageCache.has(team.id)) {
       const img = new Image();
@@ -126,24 +122,31 @@ export class PhysicsEngine {
     this.shockwaves = [];
 
     const count = puckDataList.length;
-    // Scale puck radius based on circle radius and number of participants
-    // Reduced sizes so arena feels expansive and agile
+    // Goal opening is proportioned to team sizes!
+    // In Lig Geneli (battle mode, 18-32 teams), goal arc is tighter so it's not massive compared to small balls!
+    if (isElimination || count > 8) {
+      this.goalArc = 0.22; // ~12.6 degrees (tight, challenging, perfectly proportioned)
+    } else {
+      this.goalArc = 0.36; // ~20.6 degrees for 1v1 and Tournament
+    }
+
+    // Scale puck radius
     let puckRadius;
     if (count === 2) {
       puckRadius = Math.round(this.radius * 0.115);
-      puckRadius = Math.max(14 * this.dpr, Math.min(puckRadius, 20 * this.dpr));
+      puckRadius = Math.max(13 * this.dpr, Math.min(puckRadius, 19 * this.dpr));
     } else if (count <= 8) {
       puckRadius = Math.round(this.radius * 0.085);
-      puckRadius = Math.max(11 * this.dpr, Math.min(puckRadius, 15 * this.dpr));
+      puckRadius = Math.max(10 * this.dpr, Math.min(puckRadius, 15 * this.dpr));
     } else if (count <= 18) {
-      puckRadius = Math.round(this.radius * 0.056);
+      puckRadius = Math.round(this.radius * 0.055);
       puckRadius = Math.max(8 * this.dpr, Math.min(puckRadius, 12 * this.dpr));
     } else {
-      puckRadius = Math.round(this.radius * 0.046);
+      puckRadius = Math.round(this.radius * 0.045);
       puckRadius = Math.max(7 * this.dpr, Math.min(puckRadius, 10 * this.dpr));
     }
 
-    const baseSpeed = 4.2 * this.dpr;
+    const baseSpeed = 4.0 * this.dpr;
 
     puckDataList.forEach((data, index) => {
       this.preloadTeamLogo(data.team);
@@ -242,14 +245,18 @@ export class PhysicsEngine {
   }
 
   physicsSubstep(dt) {
-    const goalStartAngle = this.goalAngle - this.goalArc / 2;
-    const goalEndAngle = this.goalAngle + this.goalArc / 2;
+    // 360 Degree Continuous Smooth Goal Orbit around the perimeter!
+    this.goalAngle = (this.goalAngle + this.goalRotSpeed * dt) % (Math.PI * 2);
+    if (this.goalAngle < 0) this.goalAngle += Math.PI * 2;
 
-    // Post positions (edges of the goal mouth)
-    const post1X = this.cx + Math.cos(goalStartAngle) * this.radius;
-    const post1Y = this.cy + Math.sin(goalStartAngle) * this.radius;
-    const post2X = this.cx + Math.cos(goalEndAngle) * this.radius;
-    const post2Y = this.cy + Math.sin(goalEndAngle) * this.radius;
+    const post1Angle = this.goalAngle - this.goalArc / 2;
+    const post2Angle = this.goalAngle + this.goalArc / 2;
+
+    // Post positions along the rotating perimeter
+    const post1X = this.cx + Math.cos(post1Angle) * this.radius;
+    const post1Y = this.cy + Math.sin(post1Angle) * this.radius;
+    const post2X = this.cx + Math.cos(post2Angle) * this.radius;
+    const post2Y = this.cy + Math.sin(post2Angle) * this.radius;
 
     const activePucks = this.pucks.filter(p => p.active && !p.eliminated);
 
@@ -258,9 +265,9 @@ export class PhysicsEngine {
       p.x += p.vx * dt * 60;
       p.y += p.vy * dt * 60;
 
-      // Keep speed energetic (normalize if it gets too slow or too fast)
+      // Keep speed energetic and natural
       const currentSpeed = Math.hypot(p.vx, p.vy);
-      const targetSpeed = (this.pucks.length > 8 ? 4.0 : 5.2) * this.dpr;
+      const targetSpeed = (this.pucks.length > 8 ? 3.6 : 4.4) * this.dpr;
       if (currentSpeed < targetSpeed * 0.75) {
         p.vx *= 1.05;
         p.vy *= 1.05;
@@ -274,14 +281,16 @@ export class PhysicsEngine {
       const dy = p.y - this.cy;
       const dist = Math.hypot(dx, dy);
 
-      // Current angle from center
-      let angle = Math.atan2(dy, dx);
-      // Normalize angle to [0, 2*PI]
-      if (angle < 0) angle += Math.PI * 2;
+      // Current angle of puck from center
+      const puckAngle = Math.atan2(dy, dx);
 
-      // Goal Opening Angle Check
-      const inGoalMouth = (angle >= goalStartAngle - 0.05 && angle <= goalEndAngle + 0.05) ||
-                          (Math.abs(angle - Math.PI) < this.goalArc * 0.65);
+      // Shortest angle difference to rotating goalAngle in [-PI, PI]
+      let diffAngle = puckAngle - this.goalAngle;
+      while (diffAngle < -Math.PI) diffAngle += Math.PI * 2;
+      while (diffAngle > Math.PI) diffAngle -= Math.PI * 2;
+
+      // Is puck inside rotating goal mouth opening?
+      const inGoalMouth = Math.abs(diffAngle) < (this.goalArc / 2 + 0.03);
 
       // Check Posts Collision
       this.checkPostCollision(p, post1X, post1Y);
@@ -289,33 +298,29 @@ export class PhysicsEngine {
 
       // Wall / Goal Collision
       if (dist + p.radius >= this.radius) {
-        if (inGoalMouth && p.x < this.cx) {
-          // Puck is entering the goal!
-          const goalBackX = this.cx - this.radius - this.goalDepth;
-
-          // Check if crossed goal line
-          if (p.x < this.cx - this.radius + p.radius * 0.2) {
+        if (inGoalMouth) {
+          // Puck is entering the rotating goal opening!
+          if (dist >= this.radius - p.radius * 0.15) {
             this.handleGoalTrigger(p);
           }
 
-          // Back net bounce
-          if (p.x - p.radius <= goalBackX) {
-            p.x = goalBackX + p.radius;
-            p.vx = Math.abs(p.vx) * 0.9;
-            this.spawnWallSparks(p.x, p.y, p.team.neon);
-          }
-          // Top & bottom goal net boundaries
-          const goalTopY = post1Y - 10;
-          const goalBottomY = post2Y + 10;
-          if (p.y - p.radius < Math.min(goalTopY, goalBottomY)) {
-            p.y = Math.min(goalTopY, goalBottomY) + p.radius;
-            p.vy = Math.abs(p.vy);
-          } else if (p.y + p.radius > Math.max(goalTopY, goalBottomY)) {
-            p.y = Math.max(goalTopY, goalBottomY) - p.radius;
-            p.vy = -Math.abs(p.vy);
+          // Back of rotating goal net boundary
+          const maxNetDist = this.radius + this.goalDepth;
+          if (dist + p.radius >= maxNetDist) {
+            const nx = dx / dist;
+            const ny = dy / dist;
+            p.x = this.cx + nx * (maxNetDist - p.radius);
+            p.y = this.cy + ny * (maxNetDist - p.radius);
+
+            const dot = p.vx * nx + p.vy * ny;
+            if (dot > 0) {
+              p.vx -= 1.8 * dot * nx;
+              p.vy -= 1.8 * dot * ny;
+              this.spawnWallSparks(p.x, p.y, p.team.neon);
+            }
           }
         } else {
-          // Normal Wall Bounce
+          // Normal Wall Bounce off the neon ring
           const nx = dx / dist;
           const ny = dy / dist;
 
@@ -441,7 +446,7 @@ export class PhysicsEngine {
     } else {
       // Mode 1: Kick Off -> GOOOOOL!
       this.triggerScreenShake(0.5, 18);
-      this.spawnGoalExplosion(this.cx - this.radius, this.cy, puck.team.neon);
+      this.spawnGoalExplosion(puck.x, puck.y, puck.team.neon);
       soundEngine.playGoal();
 
       if (this.onGoal) {
@@ -476,7 +481,7 @@ export class PhysicsEngine {
   spawnGoalExplosion(x, y, color) {
     const count = 48;
     for (let i = 0; i < count; i++) {
-      const angle = (Math.random() - 0.5) * Math.PI * 1.5; // spray inwards
+      const angle = Math.random() * Math.PI * 2; // omnidirectional blast
       const speed = (3 + Math.random() * 8) * this.dpr;
       this.particles.push({
         x: x,
@@ -632,57 +637,80 @@ export class PhysicsEngine {
   }
 
   drawGoalNet(ctx) {
-    const goalStartAngle = this.goalAngle - this.goalArc / 2;
-    const goalEndAngle = this.goalAngle + this.goalArc / 2;
+    const post1Angle = this.goalAngle - this.goalArc / 2;
+    const post2Angle = this.goalAngle + this.goalArc / 2;
 
-    const p1x = this.cx + Math.cos(goalStartAngle) * this.radius;
-    const p1y = this.cy + Math.sin(goalStartAngle) * this.radius;
-    const p2x = this.cx + Math.cos(goalEndAngle) * this.radius;
-    const p2y = this.cy + Math.sin(goalEndAngle) * this.radius;
+    const p1x = this.cx + Math.cos(post1Angle) * this.radius;
+    const p1y = this.cy + Math.sin(post1Angle) * this.radius;
+    const p2x = this.cx + Math.cos(post2Angle) * this.radius;
+    const p2y = this.cy + Math.sin(post2Angle) * this.radius;
 
-    const backX = this.cx - this.radius - this.goalDepth;
-    const backP1Y = p1y - 6 * this.dpr;
-    const backP2Y = p2y + 6 * this.dpr;
+    // Outward direction unit vector for the 360 rotating goal net
+    const dirX = Math.cos(this.goalAngle);
+    const dirY = Math.sin(this.goalAngle);
 
-    // Glowing Goal Net Box
+    // Goal net back corner points
+    const b1x = p1x + dirX * this.goalDepth;
+    const b1y = p1y + dirY * this.goalDepth;
+    const b2x = p2x + dirX * this.goalDepth;
+    const b2y = p2y + dirY * this.goalDepth;
+
     ctx.save();
-    ctx.fillStyle = 'rgba(0, 240, 255, 0.03)';
+    // Glowing net area fill
+    ctx.fillStyle = 'rgba(0, 240, 255, 0.05)';
     ctx.beginPath();
     ctx.moveTo(p1x, p1y);
-    ctx.lineTo(backX, backP1Y);
-    ctx.lineTo(backX, backP2Y);
+    ctx.lineTo(b1x, b1y);
+    ctx.lineTo(b2x, b2y);
     ctx.lineTo(p2x, p2y);
     ctx.closePath();
     ctx.fill();
 
-    // Net Grid Lines
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.28)';
-    ctx.lineWidth = 1.2 * this.dpr;
+    // Net frame & grid lines
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.lineWidth = 1.3 * this.dpr;
     ctx.shadowColor = '#00f0ff';
-    ctx.shadowBlur = 4;
+    ctx.shadowBlur = 4 * this.dpr;
 
-    // Horizontal net lines
-    const hSteps = 6;
-    for (let i = 0; i <= hSteps; i++) {
+    // Back net line
+    ctx.beginPath();
+    ctx.moveTo(b1x, b1y);
+    ctx.lineTo(b2x, b2y);
+    ctx.stroke();
+
+    // Side net lines
+    ctx.beginPath();
+    ctx.moveTo(p1x, p1y);
+    ctx.lineTo(b1x, b1y);
+    ctx.moveTo(p2x, p2y);
+    ctx.lineTo(b2x, b2y);
+    ctx.stroke();
+
+    // Longitudinal grid lines
+    const hSteps = 4;
+    for (let i = 1; i < hSteps; i++) {
       const t = i / hSteps;
-      const yFront = p1y + (p2y - p1y) * t;
-      const yBack = backP1Y + (backP2Y - backP1Y) * t;
+      const fx = p1x + (p2x - p1x) * t;
+      const fy = p1y + (p2y - p1y) * t;
+      const bx = b1x + (b2x - b1x) * t;
+      const by = b1y + (b2y - b1y) * t;
       ctx.beginPath();
-      ctx.moveTo(p1x, yFront);
-      ctx.lineTo(backX, yBack);
+      ctx.moveTo(fx, fy);
+      ctx.lineTo(bx, by);
       ctx.stroke();
     }
 
-    // Vertical net lines
-    const vSteps = 6;
-    for (let i = 0; i <= vSteps; i++) {
+    // Transverse grid lines
+    const vSteps = 4;
+    for (let i = 1; i <= vSteps; i++) {
       const t = i / vSteps;
-      const x = p1x + (backX - p1x) * t;
-      const yTop = p1y + (backP1Y - p1y) * t;
-      const yBottom = p2y + (backP2Y - p2y) * t;
+      const lx = p1x + (b1x - p1x) * t;
+      const ly = p1y + (b1y - p1y) * t;
+      const rx = p2x + (b2x - p2x) * t;
+      const ry = p2y + (b2y - p2y) * t;
       ctx.beginPath();
-      ctx.moveTo(x, yTop);
-      ctx.lineTo(x, yBottom);
+      ctx.moveTo(lx, ly);
+      ctx.lineTo(rx, ry);
       ctx.stroke();
     }
 
@@ -691,8 +719,8 @@ export class PhysicsEngine {
 
   drawNeonPerimeter(ctx) {
     ctx.save();
-    const goalStartAngle = this.goalAngle - this.goalArc / 2;
-    const goalEndAngle = this.goalAngle + this.goalArc / 2;
+    const post1Angle = this.goalAngle - this.goalArc / 2;
+    const post2Angle = this.goalAngle + this.goalArc / 2;
 
     // Outer glow blur pass
     ctx.shadowColor = '#ffeaa7';
@@ -705,8 +733,8 @@ export class PhysicsEngine {
     ctx.setLineDash([14 * this.dpr, 7 * this.dpr]);
 
     ctx.beginPath();
-    // Arc from goalEndAngle to goalStartAngle (leaving goal mouth open!)
-    ctx.arc(this.cx, this.cy, this.radius, goalEndAngle, goalStartAngle + Math.PI * 2);
+    // Arc from post2Angle clockwise around to post1Angle (leaving rotating goal mouth open!)
+    ctx.arc(this.cx, this.cy, this.radius, post2Angle, post1Angle);
     ctx.stroke();
 
     // Second intense white inner core pass
@@ -715,7 +743,7 @@ export class PhysicsEngine {
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 2.5 * this.dpr;
     ctx.beginPath();
-    ctx.arc(this.cx, this.cy, this.radius, goalEndAngle, goalStartAngle + Math.PI * 2);
+    ctx.arc(this.cx, this.cy, this.radius, post2Angle, post1Angle);
     ctx.stroke();
 
     // Draw active impact flashes on the rim

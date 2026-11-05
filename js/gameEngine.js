@@ -142,6 +142,7 @@ export class GameEngine {
     this.remainingTeams = [...teamsList];
     this.eliminatedTeams = [];
     this.championTeam = null;
+    this.matchMinute = 0;
     this.state = 'idle';
 
     const pucksData = teamsList.map(t => ({ team: t, side: 'battle' }));
@@ -208,12 +209,17 @@ export class GameEngine {
     }
     this.physics.update(dt, freezePucks);
 
-    // Advance Match Clock for Kickoff & Tournament Modes
-    if (this.mode === GAME_MODES.KICKOFF || this.mode === GAME_MODES.TOURNAMENT) {
-      if (this.state === 'first_half' || this.state === 'second_half' || this.state === 'extra_time') {
-        const minuteRate = (1 / this.realSecondsPerMatchMinute) * this.clockSpeed;
-        this.matchMinute += dt * minuteRate;
+    // Advance Match Clock across all modes (Kickoff, Tournament, and Lig Geneli!)
+    if (this.state === 'first_half' || this.state === 'second_half' || this.state === 'extra_time' || this.state === 'battle_active') {
+      const minuteRate = (1 / this.realSecondsPerMatchMinute) * this.clockSpeed;
+      this.matchMinute += dt * minuteRate;
 
+      // Continuously notify time update every frame so the counter ticks live with clockSpeed!
+      if (this.onTimeUpdate) {
+        this.onTimeUpdate(Math.floor(this.matchMinute), this.state);
+      }
+
+      if (this.mode === GAME_MODES.KICKOFF || this.mode === GAME_MODES.TOURNAMENT) {
         // Half-Time Check at 45'
         if (this.state === 'first_half' && this.matchMinute >= 45) {
           this.matchMinute = 45;
@@ -241,7 +247,7 @@ export class GameEngine {
 
           if (this.onMatchFinished) {
             this.onMatchFinished({
-              mode: GAME_MODES.KICKOFF,
+              mode: this.mode,
               teamA: this.teamA,
               teamB: this.teamB,
               scoreA: this.scoreA,

@@ -57,6 +57,8 @@ class NeonFutbolApp {
     this.battleLeagueTitle = document.getElementById('battleLeagueTitle');
     this.battleRemainingCount = document.getElementById('battleRemainingCount');
     this.battleLastEliminated = document.getElementById('battleLastEliminated');
+    this.battleTimerMinute = document.getElementById('battleTimerMinute');
+    this.battleTimerStatus = document.getElementById('battleTimerStatus');
     this.btnChangeBattleLeague = document.getElementById('btnChangeBattleLeague');
 
     // Goal & Elimination Popups
@@ -130,6 +132,11 @@ class NeonFutbolApp {
     this.btnMainPlay.addEventListener('click', () => this.handleMainPlay());
     this.btnRestart.addEventListener('click', () => {
       this.game.restartMatch();
+      if (this.game.mode === GAME_MODES.BATTLE_ROYALE) {
+        this.updateBattleScoreboardDisplay();
+      } else {
+        this.updateScoreboardDisplay();
+      }
       this.updatePlayButton();
     });
 
@@ -253,8 +260,15 @@ class NeonFutbolApp {
       this.scoreDigitB.textContent = scoreB;
     };
 
+    this.lastRenderedMinute = -1;
     this.game.onTimeUpdate = (minute, state) => {
-      this.timerMinute.textContent = `${minute}'`;
+      if (this.lastRenderedMinute !== minute) {
+        this.lastRenderedMinute = minute;
+        this.timerMinute.textContent = `${minute}'`;
+        if (this.battleTimerMinute) {
+          this.battleTimerMinute.textContent = `${minute}'`;
+        }
+      }
 
       let statusText = '1. YARI';
       if (state === 'first_half') statusText = '1. YARI';
@@ -262,9 +276,16 @@ class NeonFutbolApp {
       else if (state === 'second_half') statusText = '2. YARI';
       else if (state === 'extra_time') statusText = '+5 UZATMA';
       else if (state === 'finished') statusText = 'MAÇ BİTTİ';
+      else if (state === 'battle_active') statusText = 'MÜCADELE';
+      else if (state === 'battle_finished') statusText = 'ŞAMPİYON';
 
-      this.timerStatus.textContent = statusText;
-      this.updatePlayButton();
+      if (this.timerStatus.textContent !== statusText) {
+        this.timerStatus.textContent = statusText;
+        if (this.battleTimerStatus) {
+          this.battleTimerStatus.textContent = statusText;
+        }
+        this.updatePlayButton();
+      }
     };
 
     this.game.onGoalEvent = (event) => {
@@ -311,6 +332,7 @@ class NeonFutbolApp {
       this.loadTournamentMatch();
     }
 
+    this.physics.resize();
     this.updatePlayButton();
   }
 
@@ -416,6 +438,12 @@ class NeonFutbolApp {
     this.battleLeagueTitle.textContent = league.name;
     this.battleRemainingCount.textContent = `${teams.length}/${teams.length} TAKIM`;
     this.battleLastEliminated.textContent = 'Başlamaya Hazır';
+    if (this.battleTimerMinute) {
+      this.battleTimerMinute.textContent = `${Math.floor(this.game.matchMinute)}'`;
+    }
+    if (this.battleTimerStatus) {
+      this.battleTimerStatus.textContent = this.game.state === 'battle_active' ? 'MÜCADELE' : (this.game.state === 'battle_finished' ? 'ŞAMPİYON' : 'HAZIR');
+    }
   }
 
   showGoalPopup(team) {

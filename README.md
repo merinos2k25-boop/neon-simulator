@@ -10,14 +10,15 @@ Mobil ve masaüstü tam uyumludur; Vercel üzerinde tek tıkla canlıya alınabi
 ### 1. ⚽ Kick Off (1v1 İki Takım Karşılaşması)
 - Seçilen iki takım neon çember içerisinde yüksek tempolu 2D fizik kurallarıyla çarpışır ve çembere çarparak hareket eder.
 - **Süre Sistemi**: 45' ilk yarı + 45' ikinci yarı = toplam 90 dakika + 5 dakika uzatma süresi (toplam 95').
-- **Hız Ayarı**: Varsayılan **2x hızında** geçer; istendiğinde 1x, 4x ve 8x hız seçenekleri seçilebilir.
+- **Hız Ayarı**: `1x`, `2x` (varsayılan), `4x` ve `8x` butonları **maç süresinin akışını** hızlandırır. Topların fiziksel hareketi ise daima doğal, akıcı ve pürüzsüz hızında seyreder.
 - **Kaleye Giren Skor Üretir**: Takım diski kaleye girdiğinde **"GOOOOOL!"** neon patlaması, gol sireni ve stadyum tezahürat sesi çıkar.
 - **Düdük Sistemi**: İlk yarı sonunda tek uzun düdük, maç sonunda 3'lü bitiş düdüğü çalar.
 - **Maç Sonu**: Toplam skor, kazanan takım kutlaması ve maç istatistikleri görüntülenir.
 - **Puan Durumu**: Maç sonuçları otomatik olarak lig puan tablosuna işlenir (G: 3P, B: 1P, M: 0P).
 
-### 2. 💥 Lig Çember Eleme Modu (Battle Royale)
+### 2. 💥 Lig Geneli Eleme Modu (Battle Royale)
 - Seçilen ligdeki tüm takımlar (örneğin Trendyol Süper Lig'in 18 takımı veya Şampiyonlar Ligi'nin 32 takımı) aynı anda çember içine girer.
+- **Lig Seçimi**: İstediğiniz an Süper Lig, Şampiyonlar Ligi, Premier Lig, La Liga veya Ligue 1 liglerinden birini seçerek o ligin tüm takımlarını çembere dökebilirsiniz.
 - **Ters Kural**: Bu modda **kaleye giren takım ELENİR** ve çemberden çıkar!
 - Elenen her takım için kırmızı lazer patlaması ve **"ELENDİ!"** duyurusu yapılır.
 - Canlı sayaç kalan takım sayısını ve son elenen takımı gösterir.

@@ -30,7 +30,7 @@
         <span>⚽</span> 1v1 Maç
       </button>
       <button class="mode-tab" data-mode="battle">
-        <span>💥</span> Çember Eleme
+        <span>💥</span> Lig Geneli
       </button>
       <button class="mode-tab" data-mode="tournament">
         <span>🏆</span> Turnuva
@@ -70,14 +70,17 @@
       </div>
     </section>
 
-    <!-- Mode 2: Battle Royale Header (Shown in Battle mode) -->
+    <!-- Mode 2: Lig Geneli Header (Shown in Lig Geneli mode) -->
     <section id="battleScoreboard" class="scoreboard-container" style="display: none;">
       <div class="battle-header">
-        <div class="battle-league-info">
+        <div id="btnChangeBattleLeague" class="battle-league-info clickable" title="Ligi Değiştirmek İçin Dokunun" role="button" tabindex="0">
           <span id="battleLeagueIcon" class="battle-badge">🇹🇷</span>
           <div>
-            <div id="battleLeagueTitle" class="battle-title">Trendyol Süper Lig</div>
-            <div class="battle-subtitle">Kaleye giren takım elenir!</div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span id="battleLeagueTitle" class="battle-title">Trendyol Süper Lig</span>
+              <span class="league-change-pill">Değiştir ▾</span>
+            </div>
+            <div class="battle-subtitle">Kaleye giren takım elenir, son kalan kazanır!</div>
           </div>
         </div>
         <div class="battle-counter-chip">

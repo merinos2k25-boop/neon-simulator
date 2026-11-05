@@ -20,7 +20,7 @@ export class GameEngine {
     this.matchMinute = 0;
     this.targetMinute = 95; // 45 + 45 + 5 extra
     this.realSecondsPerMatchMinute = 0.5; // At 1x speed, 0.5s real time = 1 match minute. At 2x speed, ~23s for 90 mins!
-    this.gameSpeed = 2.0;
+    this.clockSpeed = 2.0; // 2x 4x 8x controls match clock speed, NOT ball physics!
 
     // Teams & Scores (Mode 1)
     this.teamA = null;
@@ -56,8 +56,8 @@ export class GameEngine {
   }
 
   setSpeed(speed) {
-    this.gameSpeed = speed;
-    this.physics.gameSpeed = speed;
+    this.clockSpeed = speed;
+    // Ball physics remains smooth and natural (speeding up clock only)
   }
 
   // --- MODE 1: KICK OFF ---
@@ -208,10 +208,10 @@ export class GameEngine {
     }
     this.physics.update(dt, freezePucks);
 
-    // Advance Match Clock for Kickoff Mode
-    if (this.mode === GAME_MODES.KICKOFF) {
+    // Advance Match Clock for Kickoff & Tournament Modes
+    if (this.mode === GAME_MODES.KICKOFF || this.mode === GAME_MODES.TOURNAMENT) {
       if (this.state === 'first_half' || this.state === 'second_half' || this.state === 'extra_time') {
-        const minuteRate = (1 / this.realSecondsPerMatchMinute) * this.gameSpeed;
+        const minuteRate = (1 / this.realSecondsPerMatchMinute) * this.clockSpeed;
         this.matchMinute += dt * minuteRate;
 
         // Half-Time Check at 45'

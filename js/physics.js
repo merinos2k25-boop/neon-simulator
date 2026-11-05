@@ -53,7 +53,7 @@ export class PhysicsEngine {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     
     const displayWidth = rect.width > 0 ? rect.width : (this.canvas.parentElement?.clientWidth || 380);
-    const displayHeight = rect.height > 0 ? rect.height : (this.canvas.parentElement?.clientHeight || 420);
+    const displayHeight = rect.height > 0 ? rect.height : (this.canvas.parentElement?.clientHeight || 460);
 
     // Internal buffer matches display pixels * DPR for razor sharpness
     this.canvas.width = displayWidth * dpr;
@@ -62,13 +62,47 @@ export class PhysicsEngine {
     this.height = this.canvas.height;
     this.dpr = dpr;
 
-    this.cx = this.width / 2;
-    this.cy = this.height / 2;
+    // Shift center slightly to the right to leave comfortable room for the left goal net
+    this.cx = this.width * 0.525;
+    this.cy = this.height * 0.50;
 
-    // Radius adapts to available space, leaving room for scoreboards and goal net
-    const available = Math.min(this.width * 0.44, this.height * 0.44);
-    this.radius = Math.max(110 * dpr, Math.min(available, 210 * dpr));
-    this.goalDepth = this.radius * 0.22;
+    // Radius expands to fill available width and height generously
+    // Goal net depth on the left
+    this.goalDepth = Math.max(26 * dpr, Math.min(38 * dpr, this.width * 0.09));
+    
+    // Maximize circle radius so it looks grand on all mobile and desktop screens
+    const availableW = (this.width - this.goalDepth - 16 * dpr) * 0.51;
+    const availableH = (this.height - 16 * dpr) * 0.50;
+    this.radius = Math.max(130 * dpr, Math.min(availableW, availableH));
+
+    // Recalculate existing puck sizes if already present
+    this.recalculatePuckSizes();
+  }
+
+  recalculatePuckSizes() {
+    if (!this.pucks || this.pucks.length === 0) return;
+    const count = this.pucks.length;
+    let puckRadius;
+    if (count === 2) {
+      // 1v1 match: sleek compact disc with lots of room to glide
+      puckRadius = Math.round(this.radius * 0.115);
+      puckRadius = Math.max(14 * this.dpr, Math.min(puckRadius, 20 * this.dpr));
+    } else if (count <= 8) {
+      puckRadius = Math.round(this.radius * 0.085);
+      puckRadius = Math.max(11 * this.dpr, Math.min(puckRadius, 15 * this.dpr));
+    } else if (count <= 18) {
+      // 18 teams (Süper Lig / Ligue 1)
+      puckRadius = Math.round(this.radius * 0.056);
+      puckRadius = Math.max(8 * this.dpr, Math.min(puckRadius, 12 * this.dpr));
+    } else {
+      // 20-32 teams (Premier Lig / UCL)
+      puckRadius = Math.round(this.radius * 0.046);
+      puckRadius = Math.max(7 * this.dpr, Math.min(puckRadius, 10 * this.dpr));
+    }
+
+    this.pucks.forEach(p => {
+      p.radius = puckRadius;
+    });
   }
 
   preloadTeamLogo(team) {
@@ -92,17 +126,24 @@ export class PhysicsEngine {
     this.shockwaves = [];
 
     const count = puckDataList.length;
-    // Scale puck radius based on number of participants
-    let puckRadius = 32 * this.dpr;
-    if (count > 20) {
-      puckRadius = 16 * this.dpr;
-    } else if (count > 10) {
-      puckRadius = 20 * this.dpr;
-    } else if (count > 4) {
-      puckRadius = 24 * this.dpr;
+    // Scale puck radius based on circle radius and number of participants
+    // Reduced sizes so arena feels expansive and agile
+    let puckRadius;
+    if (count === 2) {
+      puckRadius = Math.round(this.radius * 0.115);
+      puckRadius = Math.max(14 * this.dpr, Math.min(puckRadius, 20 * this.dpr));
+    } else if (count <= 8) {
+      puckRadius = Math.round(this.radius * 0.085);
+      puckRadius = Math.max(11 * this.dpr, Math.min(puckRadius, 15 * this.dpr));
+    } else if (count <= 18) {
+      puckRadius = Math.round(this.radius * 0.056);
+      puckRadius = Math.max(8 * this.dpr, Math.min(puckRadius, 12 * this.dpr));
+    } else {
+      puckRadius = Math.round(this.radius * 0.046);
+      puckRadius = Math.max(7 * this.dpr, Math.min(puckRadius, 10 * this.dpr));
     }
 
-    const baseSpeed = 4.8 * this.dpr;
+    const baseSpeed = 4.2 * this.dpr;
 
     puckDataList.forEach((data, index) => {
       this.preloadTeamLogo(data.team);
@@ -110,28 +151,28 @@ export class PhysicsEngine {
       // Spawn in circular formation or balanced positions
       let x, y, vx, vy;
       if (count === 2) {
-        // 1v1 match: Team A top-left / center, Team B bottom-right / center
-        const offset = this.radius * 0.35;
+        // 1v1 match: Team A top-center, Team B bottom-center
+        const offset = this.radius * 0.38;
         if (index === 0) {
           x = this.cx;
           y = this.cy - offset;
           vx = (Math.random() * 2 - 1) * baseSpeed;
-          vy = (1.5 + Math.random()) * baseSpeed;
+          vy = (1.4 + Math.random() * 0.6) * baseSpeed;
         } else {
           x = this.cx;
           y = this.cy + offset;
           vx = (Math.random() * 2 - 1) * baseSpeed;
-          vy = -(1.5 + Math.random()) * baseSpeed;
+          vy = -(1.4 + Math.random() * 0.6) * baseSpeed;
         }
       } else {
         // Multiple teams: distributed safely inside the inner ring
-        const spawnRadius = (this.radius - puckRadius * 2) * Math.sqrt((index + 0.5) / count);
+        const spawnRadius = (this.radius - puckRadius * 2.5) * Math.sqrt((index + 0.5) / count);
         const spawnAngle = (index / count) * Math.PI * 2 + Math.PI / 4;
         x = this.cx + Math.cos(spawnAngle) * spawnRadius;
         y = this.cy + Math.sin(spawnAngle) * spawnRadius;
 
         const launchAngle = Math.random() * Math.PI * 2;
-        const spd = baseSpeed * (0.8 + Math.random() * 0.5);
+        const spd = baseSpeed * (0.8 + Math.random() * 0.4);
         vx = Math.cos(launchAngle) * spd;
         vy = Math.sin(launchAngle) * spd;
       }
@@ -157,28 +198,29 @@ export class PhysicsEngine {
 
   resetKickoff(scoringSide) {
     if (this.pucks.length !== 2) return;
-    const baseSpeed = 4.8 * this.dpr;
-    const offset = this.radius * 0.32;
+    const baseSpeed = 4.2 * this.dpr;
+    const offset = this.radius * 0.38;
 
     this.pucks[0].x = this.cx;
     this.pucks[0].y = this.cy - offset;
     this.pucks[0].vx = (Math.random() - 0.5) * 2 * baseSpeed;
-    this.pucks[0].vy = (1.2 + Math.random() * 0.8) * baseSpeed;
+    this.pucks[0].vy = (1.3 + Math.random() * 0.6) * baseSpeed;
     this.pucks[0].trail = [];
 
     this.pucks[1].x = this.cx;
     this.pucks[1].y = this.cy + offset;
     this.pucks[1].vx = (Math.random() - 0.5) * 2 * baseSpeed;
-    this.pucks[1].vy = -(1.2 + Math.random() * 0.8) * baseSpeed;
+    this.pucks[1].vy = -(1.3 + Math.random() * 0.6) * baseSpeed;
     this.pucks[1].trail = [];
   }
 
-  // Sub-stepping physics update for absolute stability and zero tunneling
+  // Sub-stepping physics update
+  // Balls move at natural, smooth, constant physical speed. (Time multiplier applies to match clock only!)
   update(dt, freezePucks = false) {
     if (this.paused) return;
 
-    // Apply speed multiplier
-    const effectiveDt = Math.min(dt, 0.05) * this.gameSpeed;
+    // Normal physical dt (NOT multiplied by 2x/4x/8x!)
+    const effectiveDt = Math.min(dt, 0.035);
 
     if (!freezePucks) {
       const substeps = 4;
@@ -189,6 +231,7 @@ export class PhysicsEngine {
       }
     }
 
+    // Always update particles & visual effects so celebrations are fluid
     // Always update particles & visual effects so celebrations are fluid
     this.updateParticles(effectiveDt);
 

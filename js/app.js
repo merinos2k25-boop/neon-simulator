@@ -52,11 +52,12 @@ class NeonFutbolApp {
     this.timerMinute = document.getElementById('timerMinute');
     this.timerStatus = document.getElementById('timerStatus');
 
-    // Battle Royale Header Elements
+    // Battle Royale (Lig Geneli) Header Elements
     this.battleLeagueIcon = document.getElementById('battleLeagueIcon');
     this.battleLeagueTitle = document.getElementById('battleLeagueTitle');
     this.battleRemainingCount = document.getElementById('battleRemainingCount');
     this.battleLastEliminated = document.getElementById('battleLastEliminated');
+    this.btnChangeBattleLeague = document.getElementById('btnChangeBattleLeague');
 
     // Goal & Elimination Popups
     this.goalPopup = document.getElementById('goalPopup');
@@ -147,6 +148,12 @@ class NeonFutbolApp {
     });
 
     // Modals Triggers
+    if (this.btnChangeBattleLeague) {
+      this.btnChangeBattleLeague.addEventListener('click', () => {
+        this.openTeamSelectionModal('battleLeague');
+      });
+    }
+
     this.btnSelectTeams.addEventListener('click', () => {
       if (this.game.mode === GAME_MODES.BATTLE_ROYALE) {
         this.openTeamSelectionModal('battleLeague');
@@ -471,21 +478,64 @@ class NeonFutbolApp {
   openTeamSelectionModal(target) {
     this.selectionTarget = target;
     const prompt = document.getElementById('teamSelectionPrompt');
+    const randomBtn = document.getElementById('btnRandomMatch');
+
     if (target === 'teamA') {
       prompt.textContent = 'Ev Sahibi Takımı (1. Takım) Seçin:';
+      if (randomBtn) randomBtn.style.display = 'block';
+      if (this.modalLeagueTabs) this.modalLeagueTabs.style.display = 'flex';
+      this.renderLeagueTabs(this.modalLeagueTabs, (leagueId) => {
+        this.currentLeagueId = leagueId;
+        this.renderTeamsGrid(leagueId);
+      });
+      this.renderTeamsGrid(this.currentLeagueId);
     } else if (target === 'teamB') {
       prompt.textContent = 'Deplasman Takımını (2. Takım) Seçin:';
+      if (randomBtn) randomBtn.style.display = 'block';
+      if (this.modalLeagueTabs) this.modalLeagueTabs.style.display = 'flex';
+      this.renderLeagueTabs(this.modalLeagueTabs, (leagueId) => {
+        this.currentLeagueId = leagueId;
+        this.renderTeamsGrid(leagueId);
+      });
+      this.renderTeamsGrid(this.currentLeagueId);
     } else {
-      prompt.textContent = 'Çember Eleme Modu İçin Ligi Seçin:';
+      prompt.textContent = 'Lig Geneli Modu İçin Ligi Seçin (Tüm Takımlar Çembere Girer):';
+      if (randomBtn) randomBtn.style.display = 'none';
+      if (this.modalLeagueTabs) this.modalLeagueTabs.style.display = 'none';
+      this.renderBattleLeagueSelectionGrid();
     }
 
-    this.renderLeagueTabs(this.modalLeagueTabs, (leagueId) => {
-      this.currentLeagueId = leagueId;
-      this.renderTeamsGrid(leagueId);
-    });
-
-    this.renderTeamsGrid(this.currentLeagueId);
     this.openModal(this.teamsModal);
+  }
+
+  renderBattleLeagueSelectionGrid() {
+    this.modalTeamsGrid.innerHTML = '';
+    LEAGUES.forEach(league => {
+      const teams = getTeamsByLeague(league.id);
+      const isSelected = this.currentLeagueId === league.id;
+
+      const item = document.createElement('div');
+      item.className = `team-select-item ${isSelected ? 'selected' : ''}`;
+      item.style.padding = '12px 14px';
+      item.innerHTML = `
+        <div style="font-size: 1.8rem; line-height: 1;">${league.icon}</div>
+        <div class="team-select-info" style="flex: 1;">
+          <div class="team-select-name" style="font-size: 0.95rem;">${league.name}</div>
+          <div class="team-select-short" style="color: var(--neon-cyan); font-weight: 700;">${teams.length} Takım Karşılaşacak</div>
+        </div>
+      `;
+
+      item.addEventListener('click', () => {
+        this.currentLeagueId = league.id;
+        const lTeams = getTeamsByLeague(this.currentLeagueId);
+        this.game.initBattleRoyale(this.currentLeagueId, lTeams);
+        this.updateBattleScoreboardDisplay();
+        this.updatePlayButton();
+        this.closeModal(this.teamsModal);
+      });
+
+      this.modalTeamsGrid.appendChild(item);
+    });
   }
 
   renderLeagueTabs(container, onSelect) {

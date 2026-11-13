@@ -80,6 +80,26 @@ export class GameEngine {
     this.notifyUI();
   }
 
+  // --- MODE 3: TOURNAMENT MATCH ---
+  initTournamentMatch(teamA, teamB) {
+    this.mode = GAME_MODES.TOURNAMENT;
+    this.teamA = teamA;
+    this.teamB = teamB;
+    this.scoreA = 0;
+    this.scoreB = 0;
+    this.matchMinute = 0;
+    this.state = 'idle';
+    this.physics.paused = true; // Stay paused until user presses BAŞLAT!
+    this.physics.stopScreenShake();
+
+    this.physics.setPucks([
+      { team: teamA, side: 'home' },
+      { team: teamB, side: 'away' }
+    ], false);
+
+    this.notifyUI();
+  }
+
   startMatch() {
     if (this.state === 'idle') {
       soundEngine.init();
@@ -109,6 +129,8 @@ export class GameEngine {
       this.initKickoff(this.teamA, this.teamB);
     } else if (this.mode === GAME_MODES.BATTLE_ROYALE) {
       this.initBattleRoyale(this.selectedLeagueId, this.allLeagueTeams);
+    } else if (this.mode === GAME_MODES.TOURNAMENT) {
+      this.initTournamentMatch(this.teamA, this.teamB);
     }
   }
 

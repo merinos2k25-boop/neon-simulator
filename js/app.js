@@ -101,6 +101,7 @@ class NeonFutbolApp {
     this.btnRandomizeTournament = document.getElementById('btnRandomizeTournament');
     this.btnContinueTournament = document.getElementById('btnContinueTournament');
     this.tournamentUserTeamName = document.getElementById('tournamentUserTeamName');
+    this.tournamentUserTeamPill = document.getElementById('tournamentUserTeamPill');
     this.btnRandomMatch = document.getElementById('btnRandomMatch');
     this.btnConfirmSelection = document.getElementById('btnConfirmSelection');
     this.btnRematch = document.getElementById('btnRematch');
@@ -122,13 +123,27 @@ class NeonFutbolApp {
     this.teamCardA.addEventListener('click', () => {
       if (this.game.mode === GAME_MODES.KICKOFF) {
         this.openTeamSelectionModal('teamA');
+      } else if (this.game.mode === GAME_MODES.TOURNAMENT) {
+        this.openTeamSelectionModal('userTeam');
       }
     });
     this.teamCardB.addEventListener('click', () => {
       if (this.game.mode === GAME_MODES.KICKOFF) {
         this.openTeamSelectionModal('teamB');
+      } else if (this.game.mode === GAME_MODES.TOURNAMENT) {
+        if (tournamentManager.currentRound === 'quarterFinals') {
+          this.openBracketTeamSelect(0, 'teamB');
+        } else {
+          this.openTournamentBracketModal();
+        }
       }
     });
+
+    if (this.tournamentUserTeamPill) {
+      this.tournamentUserTeamPill.addEventListener('click', () => {
+        this.openTeamSelectionModal('userTeam');
+      });
+    }
 
     // Controls
     this.btnMainPlay.addEventListener('click', () => this.handleMainPlay());
@@ -166,6 +181,8 @@ class NeonFutbolApp {
     this.btnSelectTeams.addEventListener('click', () => {
       if (this.game.mode === GAME_MODES.BATTLE_ROYALE) {
         this.openTeamSelectionModal('battleLeague');
+      } else if (this.game.mode === GAME_MODES.TOURNAMENT) {
+        this.openTournamentBracketModal();
       } else {
         this.openTeamSelectionModal('teamA');
       }
@@ -355,7 +372,7 @@ class NeonFutbolApp {
       this.battleScoreboard.style.display = 'none';
       if (this.tournamentScoreboard) this.tournamentScoreboard.style.display = 'flex';
 
-      tournamentManager.createTournament(this.currentLeagueId);
+      tournamentManager.createTournament(this.currentLeagueId, this.teamA || getTeamById('fen'));
       this.loadTournamentMatch();
     }
 
@@ -374,7 +391,7 @@ class NeonFutbolApp {
       if (this.tournamentUserTeamName && tournamentManager.userTeam) {
         this.tournamentUserTeamName.textContent = tournamentManager.userTeam.name;
       }
-      this.game.initKickoff(this.teamA, this.teamB);
+      this.game.initTournamentMatch(this.teamA, this.teamB);
       this.updateScoreboardDisplay();
     }
   }
@@ -576,7 +593,16 @@ class NeonFutbolApp {
     const prompt = document.getElementById('teamSelectionPrompt');
     const randomBtn = document.getElementById('btnRandomMatch');
 
-    if (target === 'teamA') {
+    if (target === 'userTeam') {
+      prompt.textContent = 'Turnuvada Destekleyeceğiniz Tutulan Takımı Seçin:';
+      if (randomBtn) randomBtn.style.display = 'none';
+      if (this.modalLeagueTabs) this.modalLeagueTabs.style.display = 'flex';
+      this.renderLeagueTabs(this.modalLeagueTabs, (leagueId) => {
+        this.currentLeagueId = leagueId;
+        this.renderTeamsGrid(leagueId);
+      });
+      this.renderTeamsGrid(this.currentLeagueId);
+    } else if (target === 'teamA') {
       prompt.textContent = 'Ev Sahibi Takımı (1. Takım) Seçin:';
       if (randomBtn) randomBtn.style.display = 'block';
       if (this.modalLeagueTabs) this.modalLeagueTabs.style.display = 'flex';
@@ -656,7 +682,8 @@ class NeonFutbolApp {
     teams.forEach(team => {
       const item = document.createElement('div');
       const isSelected = (this.selectionTarget === 'teamA' && this.teamA.id === team.id) ||
-                         (this.selectionTarget === 'teamB' && this.teamB.id === team.id);
+                         (this.selectionTarget === 'teamB' && this.teamB.id === team.id) ||
+                         (this.selectionTarget === 'userTeam' && tournamentManager.userTeam && tournamentManager.userTeam.id === team.id);
 
       item.className = `team-select-item ${isSelected ? 'selected' : ''}`;
       item.innerHTML = `
@@ -668,6 +695,14 @@ class NeonFutbolApp {
       `;
 
       item.addEventListener('click', () => {
+        if (this.selectionTarget === 'userTeam') {
+          tournamentManager.setUserTeam(team);
+          this.closeModal(this.teamsModal);
+          this.loadTournamentMatch();
+          this.openTournamentBracketModal();
+          return;
+        }
+
         if (this.selectionTarget.startsWith('bracket_')) {
           const parts = this.selectionTarget.split('_');
           const qfIdx = parseInt(parts[1], 10);
@@ -688,6 +723,8 @@ class NeonFutbolApp {
 
         if (this.game.mode === GAME_MODES.KICKOFF) {
           this.game.initKickoff(this.teamA, this.teamB);
+        } else if (this.game.mode === GAME_MODES.TOURNAMENT) {
+          this.loadTournamentMatch();
         } else {
           const lTeams = getTeamsByLeague(this.currentLeagueId);
           this.game.initBattleRoyale(this.currentLeagueId, lTeams);

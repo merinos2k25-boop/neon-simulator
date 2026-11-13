@@ -566,7 +566,6 @@ class NeonFutbolApp {
       this.btnRematch.textContent = 'Yeniden Oyna';
       this.btnNewMatch.textContent = 'Ligi Değiştir';
     }
-    }
 
     this.openModal(this.resultModal);
   }

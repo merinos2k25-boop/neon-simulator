@@ -221,8 +221,8 @@ export class GameEngine {
     }
     this.physics.update(dt, freezePucks);
 
-    // Advance Match Clock across all modes (Kickoff, Tournament, and Lig Geneli!)
-    if (this.state === 'first_half' || this.state === 'second_half' || this.state === 'extra_time' || this.state === 'battle_active') {
+    // Advance Match Clock across all modes (ONLY when not paused and not freezing for celebration!)
+    if (!this.physics.paused && !freezePucks && (this.state === 'first_half' || this.state === 'second_half' || this.state === 'extra_time' || this.state === 'battle_active')) {
       const minuteRate = (1 / this.realSecondsPerMatchMinute) * this.clockSpeed;
       this.matchMinute += dt * minuteRate;
 

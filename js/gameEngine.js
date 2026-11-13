@@ -69,6 +69,8 @@ export class GameEngine {
     this.scoreB = 0;
     this.matchMinute = 0;
     this.state = 'idle';
+    this.physics.paused = true; // Stay paused until user presses BAŞLAT!
+    this.physics.stopScreenShake();
 
     this.physics.setPucks([
       { team: teamA, side: 'home' },
@@ -147,6 +149,8 @@ export class GameEngine {
     this.championTeam = null;
     this.matchMinute = 0;
     this.state = 'idle';
+    this.physics.paused = true; // Stay paused until user presses BAŞLAT!
+    this.physics.stopScreenShake();
 
     const pucksData = teamsList.map(t => ({ team: t, side: 'battle' }));
     this.physics.setPucks(pucksData, true);
@@ -163,6 +167,10 @@ export class GameEngine {
   }
 
   handleElimination(eliminatedTeam, remainingCount) {
+    if (this.state !== 'battle_active') {
+      return; // Do not eliminate anyone unless battle is actually running!
+    }
+
     this.eliminatedTeams.push({
       team: eliminatedTeam,
       rank: this.allLeagueTeams.length - this.eliminatedTeams.length

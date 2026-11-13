@@ -42,7 +42,7 @@ export class PhysicsEngine {
 
     // Configuration
     this.gameSpeed = 2.0;
-    this.paused = false;
+    this.paused = true; // Starts paused until user presses BAŞLAT
     this.eliminationMode = false; // Mode 2: Battle Royale
     this.chaosMode = false;       // Mode 3: Chaos Mode
 

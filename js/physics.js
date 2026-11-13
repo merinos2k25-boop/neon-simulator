@@ -11,13 +11,22 @@ export class PhysicsEngine {
     this.height = canvas.height;
     this.cx = this.width / 2;
     this.cy = this.height / 2;
-    this.radius = 180;
+
+    // Exact Target Dimensions (Requested):
+    // Çember çapı: 500 px (Yarıçap: 250 px)
+    // Top çapı: 42 px (Yarıçap: 21 px)
+    // Kale giriş açıklığı: 100 px (Kiriş uzunluğu: 100 px -> goalArc = 2 * asin(100/500) = 0.4027158 rad)
+    this.BASE_ARENA_RADIUS = 250;
+    this.BASE_PUCK_RADIUS = 21;
+    this.BASE_GOAL_ARC = 2 * Math.asin(100 / 500); // 0.40271584 rad (~23.074°)
+    this.scale = 1.0;
+    this.radius = this.BASE_ARENA_RADIUS;
 
     // 360 Degree Rotating Goal Configuration
     this.goalAngle = Math.PI; // Starts at left
     this.goalRotSpeed = 0.50; // Continuous smooth rotation (~12.5s per full 360 revolution)
-    this.goalArc = 0.65;      // Angular span (~37.2 deg for 1v1 & Turnuva, ~25-30 deg for Lig Geneli)
-    this.goalDepth = 14;      // Visual goal depth outside the circle
+    this.goalArc = this.BASE_GOAL_ARC;
+    this.goalDepth = 15;      // Visual goal depth outside the circle
     this.postRadius = 4.0;
 
     // Simulation entities
@@ -53,8 +62,8 @@ export class PhysicsEngine {
     const rect = this.canvas.getBoundingClientRect();
     const dpr = Math.min((typeof window !== 'undefined' && window.devicePixelRatio) || 1, 2);
     
-    const displayWidth = rect.width > 0 ? rect.width : (this.canvas.parentElement?.clientWidth || 380);
-    const displayHeight = rect.height > 0 ? rect.height : (this.canvas.parentElement?.clientHeight || 460);
+    const displayWidth = rect.width > 0 ? rect.width : (this.canvas.parentElement?.clientWidth || 540);
+    const displayHeight = rect.height > 0 ? rect.height : (this.canvas.parentElement?.clientHeight || 540);
 
     // Internal buffer matches display pixels * DPR for razor sharpness
     this.canvas.width = displayWidth * dpr;
@@ -68,11 +77,17 @@ export class PhysicsEngine {
     this.cy = this.height / 2;
 
     const minDim = Math.min(this.width, this.height);
-    this.goalDepth = Math.max(12 * dpr, Math.min(16 * dpr, minDim * 0.038));
+    this.goalDepth = Math.max(12 * dpr, Math.min(18 * dpr, minDim * 0.036));
     
-    // Safety margin is optimized to net depth + glow, maximizing the arena circle diameter across devices
-    const safetyMargin = this.goalDepth + 3 * dpr;
-    this.radius = Math.max(105 * dpr, (minDim / 2) - safetyMargin);
+    // Safety margin for net & glow outside the circle
+    const safetyMargin = this.goalDepth + 4 * dpr;
+
+    // Scale calculation relative to 250px base radius (500px diameter):
+    // On displays with >= 540px width (tablets, laptops, desktops), scale is 1.0 (exact 500px diameter!).
+    // On narrower mobile viewports (e.g. 390px), scale down smoothly so circle is 100% visible and unclipped.
+    const availableRadius = (minDim / 2) - safetyMargin;
+    this.scale = Math.min(1.0, availableRadius / (this.BASE_ARENA_RADIUS * dpr));
+    this.radius = Math.round(this.BASE_ARENA_RADIUS * dpr * this.scale);
 
     // Recalculate existing puck sizes if already present
     this.recalculatePuckSizes();
@@ -81,26 +96,23 @@ export class PhysicsEngine {
   recalculatePuckSizes() {
     if (!this.pucks || this.pucks.length === 0) return;
     const count = this.pucks.length;
+    const scale = this.scale || 1.0;
     let puckRadius;
 
     if (count === 2) {
-      // 1v1 Kick Off & Tournament: bold, large pucks with clear badges
-      puckRadius = Math.round(this.radius * 0.115);
-      puckRadius = Math.max(18 * this.dpr, Math.min(puckRadius, 25 * this.dpr));
-      this.goalArc = 0.65; // ~37.2 deg: ball enters goal mouth smoothly with plenty of clearance
+      // 1v1 & Turnuva: EXACT 42 px diameter (21 px radius) and EXACT 100 px goal opening
+      puckRadius = Math.round(this.BASE_PUCK_RADIUS * this.dpr * scale);
+      this.goalArc = this.BASE_GOAL_ARC; // 0.4027158 rad -> exactly 100 px chord opening
     } else if (count <= 8) {
-      puckRadius = Math.round(this.radius * 0.082);
-      puckRadius = Math.max(12 * this.dpr, Math.min(puckRadius, 18 * this.dpr));
-      this.goalArc = 0.52;
+      puckRadius = Math.round(18 * this.dpr * scale);
+      this.goalArc = 0.44;
     } else if (count <= 18) {
       // Süper Lig, Ligue 1
-      puckRadius = Math.round(this.radius * 0.062);
-      puckRadius = Math.max(9 * this.dpr, Math.min(puckRadius, 14 * this.dpr));
-      this.goalArc = 0.44;
+      puckRadius = Math.round(14 * this.dpr * scale);
+      this.goalArc = 0.40;
     } else {
       // Premier Lig (20), La Liga (20), Şampiyonlar Ligi (32)
-      puckRadius = Math.round(this.radius * 0.05);
-      puckRadius = Math.max(7.5 * this.dpr, Math.min(puckRadius, 11 * this.dpr));
+      puckRadius = Math.round(12 * this.dpr * scale);
       this.goalArc = 0.38;
     }
 
@@ -130,24 +142,22 @@ export class PhysicsEngine {
     this.shockwaves = [];
 
     const count = puckDataList.length;
-    // Goal opening is proportioned to team sizes so larger balls pass through easily!
+    const scale = this.scale || 1.0;
     let puckRadius;
+
     if (count === 2) {
-      this.goalArc = 0.65; // ~37.2 degrees: generous clearance for the larger ball to enter cleanly
-      puckRadius = Math.round(this.radius * 0.115);
-      puckRadius = Math.max(18 * this.dpr, Math.min(puckRadius, 25 * this.dpr));
+      // Çember çapı: 500 px, Top çapı: 42 px, Kale giriş açıklığı: 100 px
+      this.goalArc = this.BASE_GOAL_ARC; // 0.4027158 rad -> exactly 100 px chord opening
+      puckRadius = Math.round(this.BASE_PUCK_RADIUS * this.dpr * scale); // 21 px radius = 42 px diameter
     } else if (count <= 8) {
-      this.goalArc = 0.52; // ~29.8 degrees
-      puckRadius = Math.round(this.radius * 0.082);
-      puckRadius = Math.max(12 * this.dpr, Math.min(puckRadius, 18 * this.dpr));
+      this.goalArc = 0.44;
+      puckRadius = Math.round(18 * this.dpr * scale);
     } else if (count <= 18) {
-      this.goalArc = 0.44; // ~25.2 degrees for Süper Lig & Ligue 1
-      puckRadius = Math.round(this.radius * 0.062);
-      puckRadius = Math.max(9 * this.dpr, Math.min(puckRadius, 14 * this.dpr));
+      this.goalArc = 0.40;
+      puckRadius = Math.round(14 * this.dpr * scale);
     } else {
-      this.goalArc = 0.38; // ~21.8 degrees for 20-32 teams
-      puckRadius = Math.round(this.radius * 0.05);
-      puckRadius = Math.max(7.5 * this.dpr, Math.min(puckRadius, 11 * this.dpr));
+      this.goalArc = 0.38;
+      puckRadius = Math.round(12 * this.dpr * scale);
     }
 
     const baseSpeed = 4.0 * this.dpr;

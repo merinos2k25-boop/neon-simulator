@@ -16,9 +16,9 @@ export class PhysicsEngine {
     // 360 Degree Rotating Goal Configuration
     this.goalAngle = Math.PI; // Starts at left
     this.goalRotSpeed = 0.50; // Continuous smooth rotation (~12.5s per full 360 revolution)
-    this.goalArc = 0.36;      // Angular span (~20 deg for 1v1, ~12.5 deg for Lig Geneli)
-    this.goalDepth = 24;      // Visual goal depth outside the circle
-    this.postRadius = 5.5;
+    this.goalArc = 0.48;      // Angular span (~27.5 deg for 1v1, ~18 deg for Lig Geneli)
+    this.goalDepth = 15;      // Visual goal depth outside the circle
+    this.postRadius = 3.5;
 
     // Simulation entities
     this.pucks = [];
@@ -68,11 +68,11 @@ export class PhysicsEngine {
     this.cy = this.height / 2;
 
     const minDim = Math.min(this.width, this.height);
-    this.goalDepth = Math.max(16 * dpr, Math.min(26 * dpr, minDim * 0.065));
+    this.goalDepth = Math.max(12 * dpr, Math.min(18 * dpr, minDim * 0.045));
     
-    // Safety margin to guarantee the circle and 360 rotating goal are 100% visible on all screens with zero cutoff
-    const safetyMargin = this.goalDepth + 14 * dpr;
-    this.radius = Math.max(80 * dpr, (minDim / 2) - safetyMargin);
+    // Safety margin to guarantee the circle and 360 rotating goal are 100% visible while maximizing circle diameter
+    const safetyMargin = this.goalDepth + 5 * dpr;
+    this.radius = Math.max(90 * dpr, (minDim / 2) - safetyMargin);
 
     // Recalculate existing puck sizes if already present
     this.recalculatePuckSizes();
@@ -83,17 +83,20 @@ export class PhysicsEngine {
     const count = this.pucks.length;
     let puckRadius;
     if (count === 2) {
-      puckRadius = Math.round(this.radius * 0.115);
-      puckRadius = Math.max(13 * this.dpr, Math.min(puckRadius, 19 * this.dpr));
+      // 1v1 Kick Off & Tournament: sleek puck with generous clearance to pass into goal
+      puckRadius = Math.round(this.radius * 0.072);
+      puckRadius = Math.max(10 * this.dpr, Math.min(puckRadius, 14 * this.dpr));
     } else if (count <= 8) {
-      puckRadius = Math.round(this.radius * 0.085);
-      puckRadius = Math.max(10 * this.dpr, Math.min(puckRadius, 15 * this.dpr));
-    } else if (count <= 18) {
-      puckRadius = Math.round(this.radius * 0.055);
-      puckRadius = Math.max(8 * this.dpr, Math.min(puckRadius, 12 * this.dpr));
-    } else {
-      puckRadius = Math.round(this.radius * 0.045);
+      puckRadius = Math.round(this.radius * 0.052);
       puckRadius = Math.max(7 * this.dpr, Math.min(puckRadius, 10 * this.dpr));
+    } else if (count <= 18) {
+      // Süper Lig, Ligue 1
+      puckRadius = Math.round(this.radius * 0.042);
+      puckRadius = Math.max(6 * this.dpr, Math.min(puckRadius, 8.5 * this.dpr));
+    } else {
+      // Premier Lig (20), La Liga (20), Şampiyonlar Ligi (32)
+      puckRadius = Math.round(this.radius * 0.035);
+      puckRadius = Math.max(5 * this.dpr, Math.min(puckRadius, 7.5 * this.dpr));
     }
 
     this.pucks.forEach(p => {
@@ -122,28 +125,31 @@ export class PhysicsEngine {
     this.shockwaves = [];
 
     const count = puckDataList.length;
-    // Goal opening is proportioned to team sizes!
-    // In Lig Geneli (battle mode, 18-32 teams), goal arc is tighter so it's not massive compared to small balls!
-    if (isElimination || count > 8) {
-      this.goalArc = 0.22; // ~12.6 degrees (tight, challenging, perfectly proportioned)
+    // Goal opening is proportioned to team sizes so balls pass through easily!
+    if (count === 2) {
+      this.goalArc = 0.48; // ~27.5 degrees (generous, clean opening for 1v1 match)
+    } else if (count <= 8) {
+      this.goalArc = 0.38; // ~21.8 degrees
+    } else if (count <= 18) {
+      this.goalArc = 0.32; // ~18.3 degrees for Süper Lig & Ligue 1
     } else {
-      this.goalArc = 0.36; // ~20.6 degrees for 1v1 and Tournament
+      this.goalArc = 0.30; // ~17.2 degrees for 20-32 teams
     }
 
     // Scale puck radius
     let puckRadius;
     if (count === 2) {
-      puckRadius = Math.round(this.radius * 0.115);
-      puckRadius = Math.max(13 * this.dpr, Math.min(puckRadius, 19 * this.dpr));
+      puckRadius = Math.round(this.radius * 0.072);
+      puckRadius = Math.max(10 * this.dpr, Math.min(puckRadius, 14 * this.dpr));
     } else if (count <= 8) {
-      puckRadius = Math.round(this.radius * 0.085);
-      puckRadius = Math.max(10 * this.dpr, Math.min(puckRadius, 15 * this.dpr));
-    } else if (count <= 18) {
-      puckRadius = Math.round(this.radius * 0.055);
-      puckRadius = Math.max(8 * this.dpr, Math.min(puckRadius, 12 * this.dpr));
-    } else {
-      puckRadius = Math.round(this.radius * 0.045);
+      puckRadius = Math.round(this.radius * 0.052);
       puckRadius = Math.max(7 * this.dpr, Math.min(puckRadius, 10 * this.dpr));
+    } else if (count <= 18) {
+      puckRadius = Math.round(this.radius * 0.042);
+      puckRadius = Math.max(6 * this.dpr, Math.min(puckRadius, 8.5 * this.dpr));
+    } else {
+      puckRadius = Math.round(this.radius * 0.035);
+      puckRadius = Math.max(5 * this.dpr, Math.min(puckRadius, 7.5 * this.dpr));
     }
 
     const baseSpeed = 4.0 * this.dpr;
@@ -289,20 +295,15 @@ export class PhysicsEngine {
       while (diffAngle < -Math.PI) diffAngle += Math.PI * 2;
       while (diffAngle > Math.PI) diffAngle -= Math.PI * 2;
 
-      // Is puck inside rotating goal mouth opening?
-      const inGoalMouth = Math.abs(diffAngle) < (this.goalArc / 2 + 0.03);
-
-      // Check Posts Collision
-      this.checkPostCollision(p, post1X, post1Y);
-      this.checkPostCollision(p, post2X, post2Y);
+      // Angular half-span of the rotating goal mouth
+      const halfArc = this.goalArc / 2;
+      const inGoalMouth = Math.abs(diffAngle) < (halfArc + 0.02);
 
       // Wall / Goal Collision
       if (dist + p.radius >= this.radius) {
         if (inGoalMouth) {
-          // Puck is entering the rotating goal opening!
-          if (dist >= this.radius - p.radius * 0.15) {
-            this.handleGoalTrigger(p);
-          }
+          // Puck enters the rotating goal opening! Instant clean score/elimination!
+          this.handleGoalTrigger(p);
 
           // Back of rotating goal net boundary
           const maxNetDist = this.radius + this.goalDepth;
@@ -320,6 +321,12 @@ export class PhysicsEngine {
             }
           }
         } else {
+          // Check Posts Collision only if hitting near post edge from outside
+          if (Math.abs(diffAngle) >= halfArc && Math.abs(diffAngle) <= halfArc + 0.14) {
+            this.checkPostCollision(p, post1X, post1Y);
+            this.checkPostCollision(p, post2X, post2Y);
+          }
+
           // Normal Wall Bounce off the neon ring
           const nx = dx / dist;
           const ny = dy / dist;
@@ -812,9 +819,12 @@ export class PhysicsEngine {
 
       // 3. Draw Team Logo / Emblem
       const img = this.imageCache.get(p.team.id);
+      const rimWidth = Math.max(1.5 * this.dpr, p.radius * 0.16);
+      const clipInset = Math.max(1 * this.dpr, rimWidth * 0.6);
+
       ctx.save();
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.radius - 2 * this.dpr, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, p.radius - clipInset, 0, Math.PI * 2);
       ctx.clip();
 
       if (img && img.complete && img.naturalWidth > 0) {
@@ -834,7 +844,7 @@ export class PhysicsEngine {
 
         // Team Short Text
         ctx.fillStyle = neonColor;
-        ctx.font = `900 ${Math.max(10, p.radius * 0.45)}px system-ui, sans-serif`;
+        ctx.font = `900 ${Math.max(9, p.radius * 0.48)}px system-ui, sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(p.team.short || 'FC', p.x, p.y + 1);
@@ -849,16 +859,16 @@ export class PhysicsEngine {
       grad.addColorStop(1, 'rgba(0, 0, 0, 0.4)');
       ctx.fillStyle = grad;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.radius - 2 * this.dpr, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, p.radius - clipInset, 0, Math.PI * 2);
       ctx.fill();
 
       // 5. Outer Bright Neon Rim
       ctx.strokeStyle = neonColor;
-      ctx.lineWidth = 3 * this.dpr;
+      ctx.lineWidth = rimWidth;
       ctx.shadowColor = neonColor;
-      ctx.shadowBlur = 12 * this.dpr;
+      ctx.shadowBlur = 10 * this.dpr;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.radius - 1.5 * this.dpr, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, p.radius - rimWidth / 2, 0, Math.PI * 2);
       ctx.stroke();
 
       ctx.restore();

@@ -96,6 +96,9 @@ export class GameEngine {
 
   pauseMatch() {
     this.physics.paused = !this.physics.paused;
+    if (this.physics.paused) {
+      this.physics.stopScreenShake();
+    }
     this.notifyUI();
   }
 
@@ -180,6 +183,7 @@ export class GameEngine {
       this.championTeam = this.remainingTeams[0];
       this.state = 'battle_finished';
       this.physics.paused = true;
+      this.physics.stopScreenShake();
       soundEngine.playChampionFanfare();
 
       if (this.onMatchFinished) {
@@ -225,6 +229,7 @@ export class GameEngine {
           this.matchMinute = 45;
           this.state = 'half_time';
           this.physics.paused = true;
+          this.physics.stopScreenShake();
           soundEngine.playWhistle('halfTime');
           this.notifyUI();
         }
@@ -240,10 +245,22 @@ export class GameEngine {
           this.matchMinute = 95;
           this.state = 'finished';
           this.physics.paused = true;
+          this.physics.stopScreenShake();
           soundEngine.playWhistle('fullTime');
 
-          // Save to standings
-          standingsManager.recordMatch(this.teamA, this.teamB, this.scoreA, this.scoreB);
+          // Tournament Tie-Breaker (Knockout format requires a winner)
+          if (this.mode === GAME_MODES.TOURNAMENT && this.scoreA === this.scoreB) {
+            if (Math.random() > 0.48) {
+              this.scoreA += 1;
+            } else {
+              this.scoreB += 1;
+            }
+          }
+
+          // Save to standings (Kickoff only)
+          if (this.mode === GAME_MODES.KICKOFF) {
+            standingsManager.recordMatch(this.teamA, this.teamB, this.scoreA, this.scoreB);
+          }
 
           if (this.onMatchFinished) {
             this.onMatchFinished({

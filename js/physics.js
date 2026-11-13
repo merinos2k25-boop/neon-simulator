@@ -223,9 +223,23 @@ export class PhysicsEngine {
     this.pucks[1].trail = [];
   }
 
+  stopScreenShake() {
+    this.shakeDuration = 0;
+    this.shakeIntensity = 0;
+  }
+
   // Sub-stepping physics update
   // Balls move at natural, smooth, constant physical speed. (Time multiplier applies to match clock only!)
   update(dt, freezePucks = false) {
+    // Screen Shake decay - always decay so screen never vibrates after match ends
+    if (this.shakeDuration > 0) {
+      this.shakeDuration -= Math.min(dt, 0.05);
+      if (this.shakeDuration <= 0) {
+        this.shakeDuration = 0;
+        this.shakeIntensity = 0;
+      }
+    }
+
     if (this.paused) return;
 
     // Normal physical dt (NOT multiplied by 2x/4x/8x!)
@@ -241,13 +255,7 @@ export class PhysicsEngine {
     }
 
     // Always update particles & visual effects so celebrations are fluid
-    // Always update particles & visual effects so celebrations are fluid
     this.updateParticles(effectiveDt);
-
-    // Screen Shake decay
-    if (this.shakeDuration > 0) {
-      this.shakeDuration -= effectiveDt;
-    }
   }
 
   physicsSubstep(dt) {
@@ -577,8 +585,8 @@ export class PhysicsEngine {
     // Clear background
     ctx.clearRect(0, 0, this.width, this.height);
 
-    // Apply Screen Shake if active
-    if (this.shakeDuration > 0) {
+    // Apply Screen Shake if active and NOT paused
+    if (this.shakeDuration > 0 && !this.paused) {
       const ox = (Math.random() - 0.5) * this.shakeIntensity;
       const oy = (Math.random() - 0.5) * this.shakeIntensity;
       ctx.translate(ox, oy);

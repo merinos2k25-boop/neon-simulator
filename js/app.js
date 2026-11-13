@@ -98,7 +98,9 @@ class NeonFutbolApp {
     this.btnResetCurrentLeague = document.getElementById('btnResetCurrentLeague');
     this.btnResetAllData = document.getElementById('btnResetAllData');
     this.btnResetTournament = document.getElementById('btnResetTournament');
+    this.btnRandomizeTournament = document.getElementById('btnRandomizeTournament');
     this.btnContinueTournament = document.getElementById('btnContinueTournament');
+    this.tournamentUserTeamName = document.getElementById('tournamentUserTeamName');
     this.btnRandomMatch = document.getElementById('btnRandomMatch');
     this.btnConfirmSelection = document.getElementById('btnConfirmSelection');
     this.btnRematch = document.getElementById('btnRematch');
@@ -195,19 +197,33 @@ class NeonFutbolApp {
       }
     });
 
-    // Tournament Reset
+    // Tournament Controls
     if (this.btnResetTournament) {
       this.btnResetTournament.addEventListener('click', () => {
         if (confirm('Turnuvayı baştan başlatmak istiyor musunuz?')) {
-          tournamentManager.createTournament(this.currentLeagueId);
+          tournamentManager.createTournament(this.currentLeagueId, tournamentManager.userTeam);
           this.loadTournamentMatch();
-          this.closeModal(this.tournamentModal);
+          this.openTournamentBracketModal();
         }
       });
     }
 
+    if (this.btnRandomizeTournament) {
+      this.btnRandomizeTournament.addEventListener('click', () => {
+        tournamentManager.randomizeTeams(this.currentLeagueId);
+        this.loadTournamentMatch();
+        this.openTournamentBracketModal();
+      });
+    }
+
     if (this.btnContinueTournament) {
-      this.btnContinueTournament.addEventListener('click', () => this.closeModal(this.tournamentModal));
+      this.btnContinueTournament.addEventListener('click', () => {
+        this.closeModal(this.tournamentModal);
+        if (this.game.state === 'idle') {
+          this.game.startMatch();
+          this.updatePlayButton();
+        }
+      });
     }
 
     // Random Match
@@ -240,7 +256,14 @@ class NeonFutbolApp {
     this.btnRematch.addEventListener('click', () => {
       this.closeModal(this.resultModal);
       if (this.game.mode === GAME_MODES.TOURNAMENT) {
-        this.advanceTournament();
+        if (tournamentManager.userEliminated || tournamentManager.currentRound === 'completed') {
+          tournamentManager.createTournament(this.currentLeagueId, tournamentManager.userTeam);
+          this.loadTournamentMatch();
+        } else {
+          this.loadTournamentMatch();
+          this.game.startMatch();
+        }
+        this.updatePlayButton();
       } else {
         this.game.restartMatch();
         this.game.startMatch();
@@ -250,7 +273,11 @@ class NeonFutbolApp {
 
     this.btnNewMatch.addEventListener('click', () => {
       this.closeModal(this.resultModal);
-      this.openTeamSelectionModal('teamA');
+      if (this.game.mode === GAME_MODES.TOURNAMENT) {
+        this.openTournamentBracketModal();
+      } else {
+        this.openTeamSelectionModal('teamA');
+      }
     });
   }
 
@@ -341,21 +368,14 @@ class NeonFutbolApp {
     if (match) {
       this.teamA = match.teamA;
       this.teamB = match.teamB;
-      this.tournamentRoundTitle.textContent = tournamentManager.getCurrentRoundTitle();
+      if (this.tournamentRoundTitle) {
+        this.tournamentRoundTitle.textContent = tournamentManager.getCurrentRoundTitle();
+      }
+      if (this.tournamentUserTeamName && tournamentManager.userTeam) {
+        this.tournamentUserTeamName.textContent = tournamentManager.userTeam.name;
+      }
       this.game.initKickoff(this.teamA, this.teamB);
       this.updateScoreboardDisplay();
-    }
-  }
-
-  advanceTournament() {
-    const res = tournamentManager.recordMatchResult(this.game.scoreA, this.game.scoreB);
-    if (res && res.champion) {
-      alert(`👑 TEBRİKLER! ${res.champion.name.toUpperCase()} KUPAYI KAZANDI!`);
-      this.setMode(GAME_MODES.KICKOFF);
-    } else {
-      this.loadTournamentMatch();
-      this.game.startMatch();
-      this.updatePlayButton();
     }
   }
 
@@ -366,7 +386,13 @@ class NeonFutbolApp {
         this.game.startMatch();
       } else if (this.game.state === 'finished') {
         if (this.game.mode === GAME_MODES.TOURNAMENT) {
-          this.advanceTournament();
+          if (tournamentManager.userEliminated || tournamentManager.currentRound === 'completed') {
+            tournamentManager.createTournament(this.currentLeagueId, tournamentManager.userTeam);
+            this.loadTournamentMatch();
+          } else {
+            this.loadTournamentMatch();
+            this.game.startMatch();
+          }
         } else {
           this.game.restartMatch();
           this.game.startMatch();
@@ -472,11 +498,51 @@ class NeonFutbolApp {
     const finalScoreDisplay = document.getElementById('finalScoreDisplay');
     const totalGoalsStat = document.getElementById('totalGoalsStat');
 
-    if (summary.mode === GAME_MODES.KICKOFF || summary.mode === GAME_MODES.TOURNAMENT) {
+    if (summary.mode === GAME_MODES.TOURNAMENT) {
+      const res = tournamentManager.recordMatchResult(summary.scoreA, summary.scoreB);
       finalScoreDisplay.style.display = 'flex';
       document.getElementById('finalScoreA').textContent = summary.scoreA;
       document.getElementById('finalScoreB').textContent = summary.scoreB;
       totalGoalsStat.textContent = `⚽ Toplam Gol: ${summary.totalGoals}`;
+
+      if (res && res.userWon) {
+        winnerBadge.src = res.userTeam.badgeUrl || res.userTeam.docxLogoUrl;
+        if (res.champion) {
+          soundEngine.playChampionFanfare();
+          headline.textContent = `👑 ŞAMPİYON ${res.userTeam.name.toUpperCase()}!`;
+          subtext.textContent = 'Büyük Final zaferiyle Neon Süper Kupa Şampiyonu oldunuz!';
+          this.btnRematch.textContent = 'Yeni Turnuva Başlat 🔄';
+          this.btnNewMatch.textContent = 'Şemayı Görüntüle 🌳';
+        } else if (res.nextStage === 'semiFinals') {
+          headline.textContent = `🔥 TEBRİKLER! YARI FİNALDESİNİZ!`;
+          subtext.textContent = `Çeyrek final zaferi! Yarı finaldeki rakip: ${res.nextOpponent.name}`;
+          this.btnRematch.textContent = 'Yarı Final Maçına Geç ▶';
+          this.btnNewMatch.textContent = 'Turnuva Şeması 🌳';
+        } else if (res.nextStage === 'final') {
+          headline.textContent = `⚡ TEBRİKLER! BÜYÜK FİNALDESİNİZ!`;
+          subtext.textContent = `Yarı final zaferi! Kupa finalindeki rakip: ${res.nextOpponent.name}`;
+          this.btnRematch.textContent = 'Büyük Final Maçına Başla 🏆';
+          this.btnNewMatch.textContent = 'Turnuva Şeması 🌳';
+        }
+      } else if (res) {
+        winnerBadge.src = res.winner.badgeUrl || res.winner.docxLogoUrl;
+        headline.textContent = '❌ TURNUVADAN ELENDİNİZ!';
+        subtext.textContent = `${res.userTeam.name} elendi. Turu geçen rakip: ${res.winner.name}`;
+        this.btnRematch.textContent = 'Turnuvayı Yeniden Başlat 🔄';
+        this.btnNewMatch.textContent = 'Turnuva Şeması 🌳';
+      }
+
+      this.openModal(this.resultModal);
+      return;
+    }
+
+    if (summary.mode === GAME_MODES.KICKOFF) {
+      finalScoreDisplay.style.display = 'flex';
+      document.getElementById('finalScoreA').textContent = summary.scoreA;
+      document.getElementById('finalScoreB').textContent = summary.scoreB;
+      totalGoalsStat.textContent = `⚽ Toplam Gol: ${summary.totalGoals}`;
+      this.btnRematch.textContent = 'Tekrar Oyna';
+      this.btnNewMatch.textContent = 'Yeni Eşleşme';
 
       if (summary.scoreA > summary.scoreB) {
         winnerBadge.src = summary.teamA.badgeUrl || summary.teamA.docxLogoUrl;
@@ -497,6 +563,9 @@ class NeonFutbolApp {
       headline.textContent = `👑 ${summary.champion.name.toUpperCase()} ŞAMPİYON!`;
       subtext.textContent = `Çemberdeki tüm rakiplerini eleyerek kupayı kaldırdı!`;
       totalGoalsStat.textContent = `🔥 Elenen Takım Sayısı: ${summary.eliminatedList.length}`;
+      this.btnRematch.textContent = 'Yeniden Oyna';
+      this.btnNewMatch.textContent = 'Ligi Değiştir';
+    }
     }
 
     this.openModal(this.resultModal);
@@ -600,6 +669,17 @@ class NeonFutbolApp {
       `;
 
       item.addEventListener('click', () => {
+        if (this.selectionTarget.startsWith('bracket_')) {
+          const parts = this.selectionTarget.split('_');
+          const qfIdx = parseInt(parts[1], 10);
+          const side = parts[2];
+          tournamentManager.setTeamInSlot(qfIdx, side, team);
+          this.closeModal(this.teamsModal);
+          this.loadTournamentMatch();
+          this.openTournamentBracketModal();
+          return;
+        }
+
         if (this.selectionTarget === 'teamA') {
           this.teamA = team;
         } else if (this.selectionTarget === 'teamB') {
@@ -665,55 +745,111 @@ class NeonFutbolApp {
     const bracket = tournamentManager.bracket;
     if (!bracket) return;
 
-    const renderMatchCard = (title, match, isCurrent) => {
+    // Helper informative banner
+    const banner = document.createElement('div');
+    banner.className = 'bracket-helper-banner';
+    banner.innerHTML = `
+      <span style="font-size: 1.1rem;">💡</span>
+      <span>Çeyrek finaldeki herhangi bir takıma dokunarak <strong>istediğiniz takımla değiştirebilirsiniz</strong>.</span>
+    `;
+    container.appendChild(banner);
+
+    const renderMatchCard = (title, match, isCurrent, isQuarterFinal, qfIndex) => {
       const card = document.createElement('div');
       card.className = `bracket-match-card ${isCurrent ? 'active-match' : ''}`;
+      
+      const isTeamAUser = match.teamA && tournamentManager.userTeam && match.teamA.id === tournamentManager.userTeam.id;
+      const isTeamBUser = match.teamB && tournamentManager.userTeam && match.teamB.id === tournamentManager.userTeam.id;
+
       card.innerHTML = `
-        <div style="font-size: 0.7rem; color: #94a3b8; font-weight: 700;">${title}</div>
-        <div class="bracket-team-row ${match.winner && match.winner.id === match.teamA?.id ? 'winner' : ''}">
-          <span>${match.teamA ? match.teamA.name : 'TBD'}</span>
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.7rem; color: #94a3b8; font-weight: 700; margin-bottom: 2px;">
+          <span>${title}</span>
+          ${isCurrent ? '<span style="color: var(--neon-yellow); font-size: 0.65rem;">▶ Sizin Maçınız</span>' : ''}
+        </div>
+        <div class="bracket-team-row ${isQuarterFinal ? 'clickable-slot' : ''} ${match.winner && match.winner.id === match.teamA?.id ? 'winner' : ''}" data-slot="teamA" title="${isQuarterFinal ? 'Takımı değiştirmek için tıklayın' : ''}">
+          <div class="bracket-team-info">
+            ${match.teamA ? `<img class="bracket-team-badge" src="${match.teamA.badgeUrl || match.teamA.docxLogoUrl || ''}" alt="">` : ''}
+            <span>${match.teamA ? match.teamA.name : 'TBD (Bekleniyor)'}</span>
+            ${isTeamAUser ? '<span class="bracket-user-badge">⭐ Takımınız</span>' : ''}
+            ${isQuarterFinal && !match.winner ? '<span class="bracket-edit-hint">✏️</span>' : ''}
+          </div>
           <span class="bracket-score-pill">${match.scoreA !== null ? match.scoreA : '-'}</span>
         </div>
-        <div class="bracket-team-row ${match.winner && match.winner.id === match.teamB?.id ? 'winner' : ''}">
-          <span>${match.teamB ? match.teamB.name : 'TBD'}</span>
+        <div class="bracket-team-row ${isQuarterFinal ? 'clickable-slot' : ''} ${match.winner && match.winner.id === match.teamB?.id ? 'winner' : ''}" data-slot="teamB" title="${isQuarterFinal ? 'Takımı değiştirmek için tıklayın' : ''}">
+          <div class="bracket-team-info">
+            ${match.teamB ? `<img class="bracket-team-badge" src="${match.teamB.badgeUrl || match.teamB.docxLogoUrl || ''}" alt="">` : ''}
+            <span>${match.teamB ? match.teamB.name : 'TBD (Bekleniyor)'}</span>
+            ${isTeamBUser ? '<span class="bracket-user-badge">⭐ Takımınız</span>' : ''}
+            ${isQuarterFinal && !match.winner ? '<span class="bracket-edit-hint">✏️</span>' : ''}
+          </div>
           <span class="bracket-score-pill">${match.scoreB !== null ? match.scoreB : '-'}</span>
         </div>
       `;
+
+      if (isQuarterFinal) {
+        const rowA = card.querySelector('[data-slot="teamA"]');
+        const rowB = card.querySelector('[data-slot="teamB"]');
+        rowA.addEventListener('click', () => {
+          this.openBracketTeamSelect(qfIndex, 'teamA');
+        });
+        rowB.addEventListener('click', () => {
+          this.openBracketTeamSelect(qfIndex, 'teamB');
+        });
+      }
+
       return card;
     };
 
     // Quarterfinals
     const qfTitle = document.createElement('div');
     qfTitle.className = 'bracket-stage-title';
-    qfTitle.textContent = '⚡ Çeyrek Finaller';
+    qfTitle.textContent = '⚡ Çeyrek Finaller (1. Tur)';
     container.appendChild(qfTitle);
 
     bracket.quarterFinals.forEach((m, idx) => {
-      const isCur = tournamentManager.currentRound === 'quarterFinals' && tournamentManager.currentMatchIndex === idx;
-      container.appendChild(renderMatchCard(`Maç ${idx + 1}`, m, isCur));
+      const isCur = tournamentManager.currentRound === 'quarterFinals' && idx === 0;
+      container.appendChild(renderMatchCard(m.title, m, isCur, true, idx));
     });
 
     // Semifinals
     const sfTitle = document.createElement('div');
     sfTitle.className = 'bracket-stage-title';
-    sfTitle.textContent = '🔥 Yarı Finaller';
+    sfTitle.textContent = '🔥 Yarı Finaller (2. Tur)';
     container.appendChild(sfTitle);
 
     bracket.semiFinals.forEach((m, idx) => {
-      const isCur = tournamentManager.currentRound === 'semiFinals' && tournamentManager.currentMatchIndex === idx;
-      container.appendChild(renderMatchCard(`Yarı Final ${idx + 1}`, m, isCur));
+      const isCur = tournamentManager.currentRound === 'semiFinals' && idx === 0;
+      container.appendChild(renderMatchCard(m.title, m, isCur, false, idx));
     });
 
     // Final
     const fTitle = document.createElement('div');
     fTitle.className = 'bracket-stage-title';
-    fTitle.textContent = '👑 Büyük Final';
+    fTitle.textContent = '👑 Büyük Final 🏆';
     container.appendChild(fTitle);
 
     const isFinalCur = tournamentManager.currentRound === 'final';
-    container.appendChild(renderMatchCard('Kupa Finali', bracket.final, isFinalCur));
+    container.appendChild(renderMatchCard(bracket.final.title, bracket.final, isFinalCur, false, 0));
 
     this.openModal(this.tournamentModal);
+  }
+
+  openBracketTeamSelect(qfIndex, side) {
+    this.selectionTarget = `bracket_${qfIndex}_${side}`;
+    this.closeModal(this.tournamentModal);
+
+    const prompt = document.getElementById('teamSelectionPrompt');
+    const randomBtn = document.getElementById('btnRandomMatch');
+    prompt.textContent = `Turnuva slotu için takım seçin:`;
+    if (randomBtn) randomBtn.style.display = 'none';
+    if (this.modalLeagueTabs) this.modalLeagueTabs.style.display = 'flex';
+
+    this.renderLeagueTabs(this.modalLeagueTabs, (leagueId) => {
+      this.currentLeagueId = leagueId;
+      this.renderTeamsGrid(leagueId);
+    });
+    this.renderTeamsGrid(this.currentLeagueId);
+    this.openModal(this.teamsModal);
   }
 
   openModal(modal) {

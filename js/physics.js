@@ -16,9 +16,9 @@ export class PhysicsEngine {
     // 360 Degree Rotating Goal Configuration
     this.goalAngle = Math.PI; // Starts at left
     this.goalRotSpeed = 0.50; // Continuous smooth rotation (~12.5s per full 360 revolution)
-    this.goalArc = 0.48;      // Angular span (~27.5 deg for 1v1, ~18 deg for Lig Geneli)
-    this.goalDepth = 15;      // Visual goal depth outside the circle
-    this.postRadius = 3.5;
+    this.goalArc = 0.65;      // Angular span (~37.2 deg for 1v1 & Turnuva, ~25-30 deg for Lig Geneli)
+    this.goalDepth = 14;      // Visual goal depth outside the circle
+    this.postRadius = 4.0;
 
     // Simulation entities
     this.pucks = [];
@@ -68,11 +68,11 @@ export class PhysicsEngine {
     this.cy = this.height / 2;
 
     const minDim = Math.min(this.width, this.height);
-    this.goalDepth = Math.max(12 * dpr, Math.min(18 * dpr, minDim * 0.045));
+    this.goalDepth = Math.max(12 * dpr, Math.min(16 * dpr, minDim * 0.038));
     
-    // Safety margin to guarantee the circle and 360 rotating goal are 100% visible while maximizing circle diameter
-    const safetyMargin = this.goalDepth + 5 * dpr;
-    this.radius = Math.max(90 * dpr, (minDim / 2) - safetyMargin);
+    // Safety margin is optimized to net depth + glow, maximizing the arena circle diameter across devices
+    const safetyMargin = this.goalDepth + 3 * dpr;
+    this.radius = Math.max(105 * dpr, (minDim / 2) - safetyMargin);
 
     // Recalculate existing puck sizes if already present
     this.recalculatePuckSizes();
@@ -82,21 +82,26 @@ export class PhysicsEngine {
     if (!this.pucks || this.pucks.length === 0) return;
     const count = this.pucks.length;
     let puckRadius;
+
     if (count === 2) {
-      // 1v1 Kick Off & Tournament: sleek puck with generous clearance to pass into goal
-      puckRadius = Math.round(this.radius * 0.072);
-      puckRadius = Math.max(10 * this.dpr, Math.min(puckRadius, 14 * this.dpr));
+      // 1v1 Kick Off & Tournament: bold, large pucks with clear badges
+      puckRadius = Math.round(this.radius * 0.115);
+      puckRadius = Math.max(18 * this.dpr, Math.min(puckRadius, 25 * this.dpr));
+      this.goalArc = 0.65; // ~37.2 deg: ball enters goal mouth smoothly with plenty of clearance
     } else if (count <= 8) {
-      puckRadius = Math.round(this.radius * 0.052);
-      puckRadius = Math.max(7 * this.dpr, Math.min(puckRadius, 10 * this.dpr));
+      puckRadius = Math.round(this.radius * 0.082);
+      puckRadius = Math.max(12 * this.dpr, Math.min(puckRadius, 18 * this.dpr));
+      this.goalArc = 0.52;
     } else if (count <= 18) {
       // Süper Lig, Ligue 1
-      puckRadius = Math.round(this.radius * 0.042);
-      puckRadius = Math.max(6 * this.dpr, Math.min(puckRadius, 8.5 * this.dpr));
+      puckRadius = Math.round(this.radius * 0.062);
+      puckRadius = Math.max(9 * this.dpr, Math.min(puckRadius, 14 * this.dpr));
+      this.goalArc = 0.44;
     } else {
       // Premier Lig (20), La Liga (20), Şampiyonlar Ligi (32)
-      puckRadius = Math.round(this.radius * 0.035);
-      puckRadius = Math.max(5 * this.dpr, Math.min(puckRadius, 7.5 * this.dpr));
+      puckRadius = Math.round(this.radius * 0.05);
+      puckRadius = Math.max(7.5 * this.dpr, Math.min(puckRadius, 11 * this.dpr));
+      this.goalArc = 0.38;
     }
 
     this.pucks.forEach(p => {
@@ -125,31 +130,24 @@ export class PhysicsEngine {
     this.shockwaves = [];
 
     const count = puckDataList.length;
-    // Goal opening is proportioned to team sizes so balls pass through easily!
-    if (count === 2) {
-      this.goalArc = 0.48; // ~27.5 degrees (generous, clean opening for 1v1 match)
-    } else if (count <= 8) {
-      this.goalArc = 0.38; // ~21.8 degrees
-    } else if (count <= 18) {
-      this.goalArc = 0.32; // ~18.3 degrees for Süper Lig & Ligue 1
-    } else {
-      this.goalArc = 0.30; // ~17.2 degrees for 20-32 teams
-    }
-
-    // Scale puck radius
+    // Goal opening is proportioned to team sizes so larger balls pass through easily!
     let puckRadius;
     if (count === 2) {
-      puckRadius = Math.round(this.radius * 0.072);
-      puckRadius = Math.max(10 * this.dpr, Math.min(puckRadius, 14 * this.dpr));
+      this.goalArc = 0.65; // ~37.2 degrees: generous clearance for the larger ball to enter cleanly
+      puckRadius = Math.round(this.radius * 0.115);
+      puckRadius = Math.max(18 * this.dpr, Math.min(puckRadius, 25 * this.dpr));
     } else if (count <= 8) {
-      puckRadius = Math.round(this.radius * 0.052);
-      puckRadius = Math.max(7 * this.dpr, Math.min(puckRadius, 10 * this.dpr));
+      this.goalArc = 0.52; // ~29.8 degrees
+      puckRadius = Math.round(this.radius * 0.082);
+      puckRadius = Math.max(12 * this.dpr, Math.min(puckRadius, 18 * this.dpr));
     } else if (count <= 18) {
-      puckRadius = Math.round(this.radius * 0.042);
-      puckRadius = Math.max(6 * this.dpr, Math.min(puckRadius, 8.5 * this.dpr));
+      this.goalArc = 0.44; // ~25.2 degrees for Süper Lig & Ligue 1
+      puckRadius = Math.round(this.radius * 0.062);
+      puckRadius = Math.max(9 * this.dpr, Math.min(puckRadius, 14 * this.dpr));
     } else {
-      puckRadius = Math.round(this.radius * 0.035);
-      puckRadius = Math.max(5 * this.dpr, Math.min(puckRadius, 7.5 * this.dpr));
+      this.goalArc = 0.38; // ~21.8 degrees for 20-32 teams
+      puckRadius = Math.round(this.radius * 0.05);
+      puckRadius = Math.max(7.5 * this.dpr, Math.min(puckRadius, 11 * this.dpr));
     }
 
     const baseSpeed = 4.0 * this.dpr;
@@ -702,7 +700,7 @@ export class PhysicsEngine {
     ctx.stroke();
 
     // Longitudinal grid lines
-    const hSteps = 4;
+    const hSteps = 5;
     for (let i = 1; i < hSteps; i++) {
       const t = i / hSteps;
       const fx = p1x + (p2x - p1x) * t;

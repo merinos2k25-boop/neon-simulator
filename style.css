@@ -40,13 +40,13 @@ body {
 /* App Wrapper */
 .app-container {
   width: 100%;
-  max-width: 540px;
+  max-width: 580px;
   min-height: 100vh;
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
   position: relative;
-  padding: 6px 6px 12px;
+  padding: 4px 4px 10px;
 }
 
 /* Top Navigation Bar */
@@ -354,7 +354,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 380px;
+  min-height: 420px;
   max-height: none;
   margin: 0;
   overflow: hidden;
